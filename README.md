@@ -1,0 +1,85 @@
+# Teklif Değerlendirme Skill Paketi
+
+Satınalma tekliflerini kapsam, maliyet, ticari koşul ve risk açısından
+karşılaştırmak için iki birlikte sürümlenen Codex skill'i içerir:
+
+- `teklif-degerlendirme`: analiz, deterministik hesap ve zorunlu kontrol akışı
+- `teklif-degerlendirme-guncelle`: kararlı GitHub Release sürümünü kontrol etme,
+  doğrulama ve iki skill'i birlikte güncelleme
+
+Güncel kararlı sürüm: **v3.0.1**
+
+## Mimari özeti
+
+- Ana ajan ve bağımsız nihai denetçi: `gpt-5.6-sol` / high
+- Uzman alt ajanlar: `gpt-5.6-terra` / medium veya high
+- Yalnız çözülmeyen kritik yorumlarda karşı inceleme: `gpt-6-astra` / high
+- Luna hiçbir görevde, yedekte veya yeniden denemede kullanılmaz
+- Sabit hesaplar ve dosya kontrolleri Python araçlarıyla yapılır
+- Kritik kontrol eksikse kesin firma önerisi verilmez
+
+Aktif modelin gerçekten değişmesi istemcinin model/efor seçimini desteklemesine
+bağlıdır. Skill metni tek başına oturum modelini değiştirmez.
+
+## Kurulum
+
+Codex'e şu isteği verin:
+
+> `ozanbesinci/teklif-degerlendirme` deposundaki
+> `skills/teklif-degerlendirme` ve
+> `skills/teklif-degerlendirme-guncelle` yollarını birlikte kur.
+
+Codex'in sistem `skill-installer` aracı iki yolu tek işlemde kurar. İlk kurulumdan
+sonra skill'ler sonraki turda kullanılabilir.
+
+Elle kurulum yapanlar iki klasörü aynı fiziksel `skills` köküne birlikte koymalıdır.
+Tek klasör kurulumu desteklenen paket yapısı değildir. Ayrıntılar:
+[`skills/teklif-degerlendirme/KURULUM.md`](skills/teklif-degerlendirme/KURULUM.md).
+
+## Güncelleme
+
+Kurulumdan sonra kullanıcı açıkça “teklif değerlendirme skill'ini güncelle” dediğinde
+`teklif-degerlendirme-guncelle`, en son kararlı GitHub Release paketini ve SHA-256
+kaydını doğrular; iki skill'i birlikte günceller. Yalnız “sürümü kontrol et” isteği
+dosyalarda değişiklik yapmaz.
+
+Güncelleme aracı:
+
+- yerel değişiklik veya bilinmeyen dosyada durur,
+- analiz devam ederken güncelleme yapmaz,
+- sürüm düşürmez ve ön sürüm yüklemez,
+- uzaktan indirilen Python kodunu çalıştırmaz,
+- ZIP yol kaçışı, bağlantı, aşırı boyut ve manifest tutarsızlığını reddeder.
+
+## Release doğrulama
+
+Her Release şu iki varlığı birlikte yayımlar:
+
+- `teklif-degerlendirme-vX.Y.Z.zip`
+- `teklif-degerlendirme-vX.Y.Z.zip.sha256`
+
+v3.0.1 paketinin SHA-256 değeri:
+
+```text
+5fd2e7cce152a7cf20cbddd995aa7b675bd3644375e38b7d18d4f358c4ffd9f1
+```
+
+Sürüm ayrıntıları:
+[`skills/teklif-degerlendirme/CHANGELOG.md`](skills/teklif-degerlendirme/CHANGELOG.md).
+
+## Doğrulanan kapsam
+
+v3.0.1 için 85 ayrı otomatik test geçti. Bunlar hesap motoru, kontrol kapısı,
+XLSX/PDF yapısal kontrolleri, önceki hesap örnekleri ve çift-skill güncelleme
+senaryolarını kapsar. Birim testleri gerçek tekliflerle canlı Sol/Terra/Astra
+uçtan uca çalışmasının veya gerçek Excel görsel incelemesinin yerine geçmez.
+
+## Veri sınırı
+
+Bu depo yalnız skill kaynaklarını içerir. Gerçek teklifler, şirket belgeleri,
+analiz çıktıları, sohbet/hafıza dosyaları ve kimlik bilgileri yayımlanmaz.
+
+## Lisans
+
+Bu depoda henüz açık kaynak lisansı tanımlanmamıştır. Kaynakların görünür olması,
+yeniden dağıtım veya türev eser izni verildiği anlamına gelmez.

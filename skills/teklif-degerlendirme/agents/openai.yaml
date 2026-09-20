@@ -1,0 +1,4 @@
+interface:
+  display_name: "Teklif Değerlendirme"
+  short_description: "Kanıtlı teklif analizi ve bağımsız kontrol"
+  default_prompt: "$teklif-degerlendirme ile bu teklifleri kaynakları ve riskleriyle karşılaştır."
