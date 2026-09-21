@@ -51,9 +51,24 @@ Güncelleme aracı:
 - uzaktan indirilen Python kodunu çalıştırmaz,
 - ZIP yol kaçışı, bağlantı, aşırı boyut ve manifest tutarsızlığını reddeder.
 
+## Eski sürüme dönme
+
+Tarihsel **v2.0.3** sürümü GitHub'dan kurulabilir:
+
+> `ozanbesinci/teklif-degerlendirme` deposunun `v2.0.3` etiketindeki
+> `skills/teklif-degerlendirme` yolunu kur.
+
+v2.0.3 yalnız ana skill'i içerir; `teklif-degerlendirme-guncelle` o sürümde yoktur.
+v3 güncelleyicisi bilinçli olarak sürüm düşürmez. Mevcut hedef klasör varken sistem
+kurucusu üzerine yazmaz; v3'ten dönüş, mevcut v3 çiftinin açıkça kaldırıldığı ve
+yalnız v2.0.3 ana skill'inin kurulduğu ayrı bir işlem olmalıdır.
+
+[v2.0.3 kaynak etiketi](https://github.com/ozanbesinci/teklif-degerlendirme/tree/v2.0.3) ·
+[v2.0.3 Release](https://github.com/ozanbesinci/teklif-degerlendirme/releases/tag/v2.0.3)
+
 ## Release doğrulama
 
-Her Release şu iki varlığı birlikte yayımlar:
+Her güncel v3 Release şu iki varlığı birlikte yayımlar:
 
 - `teklif-degerlendirme-vX.Y.Z.zip`
 - `teklif-degerlendirme-vX.Y.Z.zip.sha256`
