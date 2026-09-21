@@ -9,6 +9,37 @@ Sürüm numarası kuralı: **büyük** (omurga değişti, çıktı yapısı değ
 
 ---
 
+## v3.1.1 — 2026-09-21
+
+- CLI devamlarında mantıksal `task_id` sabitlendi; coordinator ve reviewer sonuçları
+  başarılı model dönüşünden sonra otomatik kaydediliyor. Elle mühür döngüsü yalnız
+  yerleşik oturum yolunda kaldı.
+- Dış model/ağ erişimi kaynak paylaşmadan ve koşu dizini oluşturulmadan önce sınanıyor;
+  platform izni erkene alındı, ticari sır için yinelenen onay eklenmedi.
+- Ctrl+C terminal durumu kurtarma makbuzuna dönüşüyor; kapanış yarıda kesilirse aynı
+  komut yaşam döngüsü kaydını değiştirmeden kilit temizliğini tamamlıyor.
+- Sol/high denetçi öncesine hash-bağlı yerel kalite kapısı eklendi. Unicode, kaynak
+  konumu, formül önbelleği, SHA etiketi ve kırık dosya bağlantıları model turundan önce
+  denetleniyor.
+- Çağrı, revizyon, girdi/çıktı tokenı ve süre tavanları eklendi; dar Excel teslim
+  kusurlarında tam konuşma bağlamını yeniden oynatma yolu kapatıldı.
+
+## v3.1.0 — 2026-09-21
+
+- Tek koordinatör, gerçek yerleşik oturum makbuzu, CLI olay/kullanım kaydı ve aynı
+  oturumda hedefli revizyon eklendi; boş durum sorgularını ve tekrar bağlam yükünü azaltmak hedeflendi.
+- Ön sonuç ve kesin karar kapıları ayrıldı; kritik belirsizlikler kritik kalır,
+  UNVERIFIED korunur ve tamamlanma/iptal durumu kalıcı kaydedilir.
+- Kaynak listesi, koşuya özel kilit, değişmez skill snapshot'ı ve denetçiye özel
+  yazma alanı eklendi; değişmeyen kanıt tekrar çıkarılmaz, kör inceleme önce kaydedilir.
+- Standart veri/Excel üreticisi ve tekrar kullanılabilir kontroller eklendi.
+- Mevcut izinli OpenAI analiz rolleri arasında ticari veri işleme için yinelenen
+  koordinatör/denetçi onayları kaldırıldı; dış paylaşım ve platform izin sınırları korundu.
+- Güncelleyici bağımsız v1.0.0 hattına ayrıldı. Şema 2 paketi bileşen sürümlerini
+  ayrı taşır; doğrulanan yeni kurulum eski iki ağacı tamamen değiştirir, artıkları siler.
+- GitHub'a yayın/yükleme öncesinde ayrıca kullanıcı onayı zorunlu; yerel geliştirme
+  yayının tamamlandığı anlamına gelmez.
+
 ## v3.0.1 — 2026-09-20
 
 - Ana ajan Sol/high, uzmanlar Terra/medium-high, bağımsız denetçi Sol/high ve

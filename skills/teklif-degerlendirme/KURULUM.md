@@ -1,4 +1,4 @@
-# Kurulum ve Dağıtım — v3.0.1
+# Kurulum ve Dağıtım — ana skill v3.1.1 / güncelleyici v1.0.0
 
 ## Paket ve kaynak
 
@@ -22,7 +22,10 @@ skills/
     scripts/
 ```
 
-Her iki VERSION dosyası aynı olmalıdır. Kullanıcıya görünen güncelleme skill'i
+VERSION dosyaları bağımsızdır: ana skill 3.1.1, güncelleyici 1.0.0. Şema 2 paket
+manifesti `skill_versions` içinde ikisini ayrı taşır; `version` paket etiketidir.
+Yalnız güncelleyici değiştiğinde `paket_olustur.py --release-version` ile paket
+etiketi artırılır; ana skill zorla artırılmaz. Kullanıcıya görünen güncelleme skill'i
 “Teklif Değerlendirme Güncelle”, teknik adı `teklif-degerlendirme-guncelle`dir.
 Güncelleme için GitHub hesabı gerekmez; public Release okuması yeterlidir. Yayınlamak
 için depo yazma yetkisi gerekir. Kimlik bilgisi skill'e veya dağıtım ZIP'ine konmaz.
@@ -70,8 +73,9 @@ Bu paketin rol politikası yalnız teklif değerlendirme çalışmasına aittir.
 3. Kaynak envanteri, gerekirse sorular, hesap ve bağımsız kontrol sonrası çıktıyı al.
 4. Alt ajan model/efor seçimi yerleşik araçla açık parametreler üzerinden veya
    `scripts/ajan_yonetimi.py` ile yapılır. Dry-run model çağrısı değildir.
-5. İnceleme devam ederken skill güncellenmez. Kapanmamış bir analiz kilidi varsa
-   işlemi/çalışma kaydını kontrol et; körlemesine kilit silme.
+5. Hazırlanmış analiz manifestteki değişmez `runner`/snapshot ile sürer. Yeni
+   kurulum bunu değiştirmez; güncelleme sırasında yeni snapshot alınmaz. Eski
+   v3.0.1 global analiz kilidi varsa güncelleme durur; kilidi körlemesine silme.
 
 `references/ajan-calistirma.md` çalıştırıcı ve teslim kontrolü şemasını açıklar.
 Sadece SKILL.md'ye “Sol kullan” yazmak aktif oturumun modelini değiştirmez.
@@ -84,7 +88,9 @@ yetkilendirir. “Sürümü kontrol et” yalnız okuma yapar. Güncelleyici dah
 sürümü doğrular; analiz/güncelleme kilidi, dosya değişikliği veya sürüm uyuşmazlığında
 durur. Yerel değişiklikleri silmez, başka model seçmez, uzaktaki script'i çalıştırmaz.
 
-Paket doğrulanmadan mevcut kurulum değiştirilmez. Başarısız işlem eski sürümün
+Paket doğrulanmadan mevcut kurulum değiştirilmez. Güncelleme dosyaları üst üste
+eklemez; iki eski skill ağacını tamamen yenileriyle değiştirir. Başarıda geçici
+eski ağaçlar silinir; artık script veya eski sürüm klasörü kalmaz. Başarısız işlem eski sürümün
 korunmasını/geri alınmasını hedefler; güç kesintisi ve süreç çökmesinden sonra
 kurulum durumu ayrıca doğrulanır. İki klasörün değiştirilmesi tek bir atomik dosya
 işlemi değildir; kurtarma ve kilit kontrollerini atlama. Yeni sürüm sonraki analizde
@@ -104,7 +110,8 @@ olmayan ortamda v3'ün tam çalışma profili kullanılıyor denmez.
 
 ## Sürüm hazırlama ve doğrulama
 
-- İki VERSION, skill metadata ve CHANGELOG aynı sürümü göstermeli.
+- Her skill'in VERSION, kendi metadata ve CHANGELOG'u birbirini tutmalı;
+  iki skill'in sürümünün eşit olması gerekmez.
 - Mevcut 37 hesap örneği, yeni hesap/kontrol/güncelleme birim testleri çalışmalı.
 - Kurulum, daha yeni sürüm, bozuk paket, yerel değişiklik, aktif analiz, geri alma
   ve zorunlu kontrol eksikliği test edilmeli.
@@ -114,9 +121,17 @@ olmayan ortamda v3'ün tam çalışma profili kullanılıyor denmez.
   dizini skill ağacının dışında olmalıdır. Kurumsal belgeler, analizler, anahtarlar,
   sohbet/hafıza dosyaları ve testteki gerçek şirket verileri dağıtıma girmez.
 - GitHub'a yalnız bu bağımsız paket/kaynak yapısı yayımlanır; vault'un tamamı
-  gönderilmez. Release etiketi `v3.0.1` ile paket sürümü aynı olmalı.
+  gönderilmez. Release etiketi ile paket `version` alanı aynı olmalı.
+- Yerel geliştirme/kurulumdan sonra push, tag, Release ve yükleme için kullanıcıdan
+  ayrıca onay alınır; kullanıcı model değiştirecekse burada durulur.
 - Kimlik doğrulaması veya yayın tamamlanmadıysa yerel güncelleme ile çevrimiçi yayın
   ayrı durum olarak raporlanır. Yeni sürüm yayımlamak kullanıcı analizini çalıştırmaz.
 
-Önceki sürüm ayrıntıları `CHANGELOG.md` içindedir. v3.0.1 testi üretim ortamında
+**Bir kerelik geçiş:** eski 3.0.1 güncelleyici şema 2'yi okuyamaz. İlk geçişte yeni
+1.0.0 güncelleyicinin doğrulanmış kaynak kopyasıyla `install` çalıştırılır veya iki
+skill onaylı kaynak kurulum aracıyla yenilenip paketle `register` edilir. Eski
+script'in yeni şemayı desteklediği söylenmez. Yerel adayın yeni güncelleyicisi
+bu geçişi yapar; sonraki `update` normal çalışır.
+
+Önceki sürüm ayrıntıları `CHANGELOG.md` içindedir. Birim testi üretim ortamında
 “sıfır hata”, maliyet azalması veya bütün platformlarda eşdeğer davranış garantisi değildir.

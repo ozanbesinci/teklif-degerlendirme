@@ -1,4 +1,4 @@
-# Ajan Mimarisi — v3.0.1
+# Ajan Mimarisi — v3.1.1
 
 ## Yetki ve iş paylaşımı
 
@@ -10,7 +10,8 @@ ajan açmaz. Paylaşılan klasöre eşzamanlı yazma yoktur. Ana ajan yalnız ke
 çalışma alanında sonuçları kabul eder ve birleştirir.
 
 Yerel çalışan süreçte kaynaklar salt okunur; çıktı dizini kaynak ve skill dizininden
-ayrıdır. Yerel sandbox bir gizlilik sınırı değildir: modele verilen veri sağlayıcıya
+ayrıdır; çalışma alanı kaynak taramasından dışlanan `analiz/.work/` altında olabilir.
+Yerel sandbox bir gizlilik sınırı değildir: modele verilen veri sağlayıcıya
 gidebilir. Kullanıcının belirlediği veri/araç/sağlayıcı sınırlarını koru.
 
 ## Akış ve koşullu roller
@@ -68,6 +69,8 @@ eleme gerekçesi ve kazananı etkileyen varsayım orijinalden yeniden doğrulan�
 
 Denetçinin ilk görevi yalnız ham belgeler, objektif gereksinimler ve inceleme
 kapsamıdır. Ana ajanın önerdiği kazanan, toplam puan, yorum ve gerekçe verilmez.
+Beklenen kontrol durumu veya ana analizin bulguları da verilmez. Kör kaynak incelemesi
+ana analizle paralel başlayabilir; kayıt alındıktan sonra aynı denetçi devam eder.
 Denetçi kendi kritik alan/şart tespitini kaydeder. İkinci görevde bu denetçiye merkezi
 veri, hesap çıktısı, eleme/kısa liste kayıtları ve gerçek Excel/PDF verilir; kendi
 ilk bulgularıyla karşılaştırır. İlk inceleme sonuca göre yeniden yazılmaz.
@@ -87,7 +90,8 @@ kapısı geçmez. Platform sınırı kullanıcıya bildirilir.
 - Hesap: testli motor, kaynak beyanıyla mutabakat, bağımsız yöntem, duyarlılık.
 - Çıktı: Excel formülü gerçekten yeniden hesaplandı; parametre değişimi beklendiği
   gibi yansıdı; PDF ve Excel sonuçları/veri sürümleri aynı; görsel taşma yok.
-- Bağımsız denetim: ilk kör okuma + sonuç denetimi; kritik açık yok.
+- Bağımsız denetim: ilk kör okuma + sonuç denetimi; ön sonuçta kritik açıklar görünür,
+  kesin satınalma kararında çözümlenmiş olmalı.
 - Son tazelik: kaynak/veri/skill/çıktı hashleri kontrolün bağlı olduğu sürümle aynı.
 
 Her kapı geçti/kaldı/doğrulanamadı olur. Yalnız gerçekten ilgisiz alt kontrolde
@@ -102,6 +106,11 @@ sınırsız tekrarlama. İki sonuç aynı kritik noktada çelişiyorsa ham kayna
 gerekirse dar Astra incelemesi veya kullanıcı sorusu. Yeni model çağrısı için
 belirli bir soru/kanıt ihtiyacı bulunmalı. Kullanım sınırına gelindiyse durumu bildir;
 kritik kontrolü atlayıp tamamlandı deme.
+
+Koşu politikası çağrı, revizyon, toplam girdi/çıktı tokenı ve duvar saati tavanı taşır.
+Sınır dolunca yeni model görevi açılmaz; yeni kanıt, kapsam daraltma veya kullanıcı kararı
+beklenir. Mekanik Excel/bağlantı/hash/karakter kusurları yerel ön kalite raporuyla
+yakalanır; bunlar için Sol/high konuşma bağlamı yeniden oynatılmaz.
 
 Revize kaynak bağımlı veri, maliyet, puan, rapor ve denetimi geçersiz kılar.
 Değişmeyen veri ancak hash + yöntem + parametre + ilgili kural sürümü değişmediyse

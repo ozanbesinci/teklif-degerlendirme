@@ -1,6 +1,15 @@
 {
-  "policy_version": "3.0.1",
+  "policy_version": "3.1.1",
+  "transfer_scope": "User-requested analysis through the already configured OpenAI account and allowed roles; no duplicate coordinator/reviewer consent. No new provider, external recipient, publication or permission bypass is authorized.",
   "max_coordinator_workers": 3,
+  "budgets": {
+    "max_dispatches": 10,
+    "max_revision_dispatches": 4,
+    "max_input_tokens": 80000000,
+    "max_output_tokens": 750000,
+    "max_wall_seconds": 5400,
+    "max_dispatch_seconds": 1200
+  },
   "roles": {
     "coordinator": {"model": "gpt-5.6-sol", "reasoning_effort": "high", "can_dispatch": true},
     "reviewer": {"model": "gpt-5.6-sol", "reasoning_effort": "high", "independent_required": true},

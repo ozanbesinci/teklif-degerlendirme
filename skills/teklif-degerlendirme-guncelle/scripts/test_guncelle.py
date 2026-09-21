@@ -11,16 +11,19 @@ import zipfile
 import guncelle as u
 
 
-def package(release="3.0.1", additions=None, rewrite=None):
+def package(release="3.0.1", additions=None, rewrite=None, versions=None):
     files = {}
     for skill in u.SKILLS:
-        files[f"skills/{skill}/SKILL.md"] = f'---\nname: {skill}\ndescription: Fixture\nmetadata:\n  version: "{release}"\n---\nTest\n'.encode()
-        files[f"skills/{skill}/VERSION"] = (release + "\n").encode()
-    files["skills/teklif-degerlendirme/CHANGELOG.md"] = f"# Changes\n\n## v{release}\nFixture\n".encode()
+        v = versions[skill] if versions else release
+        files[f"skills/{skill}/SKILL.md"] = f'---\nname: {skill}\ndescription: Fixture\nmetadata:\n  version: "{v}"\n---\nTest\n'.encode()
+        files[f"skills/{skill}/VERSION"] = (v + "\n").encode()
+        files[f"skills/{skill}/CHANGELOG.md"] = f"# Changes\n\n## v{v}\nFixture\n".encode()
     if additions:
         files.update(additions)
     manifest = {"schema": 1, "repository": u.REPO, "version": release,
                 "files": {p: u.sha(b) for p, b in files.items()}}
+    if versions:
+        manifest.update(schema=2, versioning="independent/v1", skill_versions=versions)
     entries = {**files, u.MANIFEST: json.dumps(manifest).encode()}
     if rewrite:
         rewrite(entries)
@@ -49,6 +52,23 @@ class UpdateTests(unittest.TestCase):
         for skill in u.SKILLS:
             self.assertEqual((self.root / skill / "VERSION").read_text().strip(), "3.0.2")
         self.assertFalse((self.root / u.JOURNAL).exists())
+
+    def test_staging_inherits_install_root_permissions(self):
+        data, digest = package()
+        with patch.object(u.tempfile, "mkdtemp", side_effect=AssertionError("Private staging DACL must not be used")):
+            u.install(self.root, data, digest)
+        self.assertEqual(u.verify_install(self.root)["version"], "3.0.1")
+
+    def test_same_version_local_candidate_requires_explicit_flag_and_valid_old_tree(self):
+        data, digest = package(); u.install(self.root, data, digest)
+        changed, checksum = package(additions={"skills/teklif-degerlendirme/scripts/new.py": b"# fixture"})
+        with self.assertRaises(u.UpdateError): u.install(self.root, changed, checksum)
+        u.install(self.root, changed, checksum, replace_local=True)
+        self.assertTrue((self.root / u.SKILLS[0] / "scripts/new.py").exists())
+        older, oldsum = package("3.0.0")
+        with self.assertRaises(u.UpdateError): u.install(self.root, older, oldsum, replace_local=True)
+        (self.root / u.SKILLS[0] / "VERSION").write_text("changed")
+        with self.assertRaises(u.UpdateError): u.install(self.root, data, digest, replace_local=True)
 
     def test_bad_archive_hash_does_not_touch_install(self):
         data, digest = package(); u.install(self.root, data, digest)
@@ -153,6 +173,46 @@ class UpdateTests(unittest.TestCase):
             changed = files[name].replace(b"3.0.1", b"3.0.0")
             with self.subTest(name=name), self.assertRaises(u.UpdateError):
                 u.validate_archive(*package(additions={name: changed}))
+
+
+    def test_legacy_to_independent_versions_and_obsolete_files_removed(self):
+        stale = "skills/teklif-degerlendirme/scripts/obsolete.py"
+        u.install(self.root, *package(additions={stale: b"old release code"}))
+        versions = {u.SKILLS[0]: "3.1.0", u.SKILLS[1]: "1.0.0"}
+        result = u.install(self.root, *package("3.1.0", versions=versions))
+        self.assertTrue(result["previous_version_removed"])
+        self.assertEqual(u.component_versions(u.verify_install(self.root)), versions)
+        self.assertFalse((self.root / u.SKILLS[0] / "scripts/obsolete.py").exists())
+        self.assertEqual(list(self.root.glob(".teklif-stage-*")), [])
+        self.assertFalse((self.root / u.JOURNAL).exists())
+
+    def test_updater_only_release_does_not_bump_main(self):
+        versions = {u.SKILLS[0]: "3.1.0", u.SKILLS[1]: "1.0.0"}
+        u.install(self.root, *package("3.1.0", versions=versions))
+        versions[u.SKILLS[1]] = "1.0.1"
+        u.install(self.root, *package("3.1.1", versions=versions))
+        self.assertEqual(u.component_versions(u.verify_install(self.root)), versions)
+        versions[u.SKILLS[1]] = "1.0.0"
+        with self.assertRaises(u.UpdateError):
+            u.install(self.root, *package("3.1.2", versions=versions))
+
+    def test_independent_version_mismatch_rejected(self):
+        versions = {u.SKILLS[0]: "3.1.0", u.SKILLS[1]: "1.0.0"}
+        bad = {"skills/teklif-degerlendirme-guncelle/VERSION": b"3.1.0\n"}
+        with self.assertRaises(u.UpdateError):
+            u.validate_archive(*package("3.1.0", versions=versions, additions=bad))
+
+    def test_independent_upgrade_rolls_back_complete_old_tree(self):
+        u.install(self.root, *package())
+        replace = u.os.replace
+        def fail_second(source, target):
+            if Path(source).parent.name == "new" and Path(source).name == u.SKILLS[1]:
+                raise OSError("fixture placement failed")
+            return replace(source, target)
+        with patch.object(u.os, "replace", side_effect=fail_second):
+            with self.assertRaises(OSError):
+                u.install(self.root, *package("3.1.0", versions={u.SKILLS[0]: "3.1.0", u.SKILLS[1]: "1.0.0"}))
+        self.assertEqual(u.verify_install(self.root)["version"], "3.0.1")
 
 
 if __name__ == "__main__":

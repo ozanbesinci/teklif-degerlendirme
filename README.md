@@ -7,7 +7,9 @@ karşılaştırmak için iki birlikte sürümlenen Codex skill'i içerir:
 - `teklif-degerlendirme-guncelle`: kararlı GitHub Release sürümünü kontrol etme,
   doğrulama ve iki skill'i birlikte güncelleme
 
-Güncel kararlı sürüm: **v3.0.1**
+Güncel kararlı paket: **v3.1.1**
+
+Ana skill: **3.1.1** · Güncelleyici: **1.0.0**
 
 ## Mimari özeti
 
@@ -17,6 +19,10 @@ Güncel kararlı sürüm: **v3.0.1**
 - Luna hiçbir görevde, yedekte veya yeniden denemede kullanılmaz
 - Sabit hesaplar ve dosya kontrolleri Python araçlarıyla yapılır
 - Kritik kontrol eksikse kesin firma önerisi verilmez
+- CLI devamlarında mantıksal görev kimliği sabittir; her deneme ayrı kaydedilir
+- Model/ağ erişimi kaynak paylaşılmadan ve koşu klasörü oluşturulmadan önce sınanır
+- Denetçi karşılaştırmasından önce deterministik Excel/JSON kalite kapısı çalışır
+- Çağrı, revizyon, token ve süre tavanları kontrolsüz tekrarları durdurur
 
 Aktif modelin gerçekten değişmesi istemcinin model/efor seçimini desteklemesine
 bağlıdır. Skill metni tek başına oturum modelini değiştirmez.
@@ -73,10 +79,10 @@ Her güncel v3 Release şu iki varlığı birlikte yayımlar:
 - `teklif-degerlendirme-vX.Y.Z.zip`
 - `teklif-degerlendirme-vX.Y.Z.zip.sha256`
 
-v3.0.1 paketinin SHA-256 değeri:
+v3.1.1 paketinin SHA-256 değeri:
 
 ```text
-5fd2e7cce152a7cf20cbddd995aa7b675bd3644375e38b7d18d4f358c4ffd9f1
+f02796d62c92d5200ae66e51b4640ee212ae1ee7991ec3b67727ddce8cfa9441
 ```
 
 Sürüm ayrıntıları:
@@ -84,10 +90,11 @@ Sürüm ayrıntıları:
 
 ## Doğrulanan kapsam
 
-v3.0.1 için 85 ayrı otomatik test geçti. Bunlar hesap motoru, kontrol kapısı,
-XLSX/PDF yapısal kontrolleri, önceki hesap örnekleri ve çift-skill güncelleme
-senaryolarını kapsar. Birim testleri gerçek tekliflerle canlı Sol/Terra/Astra
-uçtan uca çalışmasının veya gerçek Excel görsel incelemesinin yerine geçmez.
+v3.1.1 için 116 otomatik test geçti: 57 runtime/çıktı/Excel/motor testi, 37 hesap
+örneği ve 22 güncelleyici testi. Bunlar sabit görev kimliği, otomatik artefakt kaydı,
+kesinti kurtarma, bütçe kapıları, yerel ön kalite denetimi ve tam-ağaç güncelleme
+senaryolarını da kapsar. Birim testleri, düzeltme öncesinde yapılan gerçek teklif
+koşusunun veya yeni sürümle tam canlı Sol/Terra/Astra tekrarının yerine geçmez.
 
 ## Veri sınırı
 

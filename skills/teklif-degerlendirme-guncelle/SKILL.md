@@ -1,67 +1,71 @@
 ---
 name: teklif-degerlendirme-guncelle
-description: Teklif değerlendirme paketinin GitHub'daki kararlı sürümünü kontrol eder; açık kurulum veya güncelleme isteğinde ana skill ile güncelleme skill'ini birlikte yükler. Yalnız sürüm kontrolü istendiğinde dosyaları değiştirmez.
+description: Teklif değerlendirme paketinin kararlı sürümünü kontrol eder; açık kurulum/güncelleme isteğinde eski yönetilen sürümü doğrulanmış yeni paketle tamamen değiştirir. Ana skill ve güncelleyicinin bağımsız sürümlerini izler. Salt sürüm kontrolünde dosya değiştirmez.
 metadata:
-  version: "3.0.1"
+  version: "1.0.0"
 ---
 
 # Teklif Değerlendirme Güncelle
 
-Resmî depo `ozanbesinci/teklif-degerlendirme`; ana skill ile bu skill aynı sürümde
-kurulur. Bu akış deterministiktir; alt ajan veya model çağrısı gerekmez. Luna yoktur.
+Resmî depo `ozanbesinci/teklif-degerlendirme`. İki skill birlikte dağıtılır fakat
+sürümleri bağımsızdır. Güncelleyicinin bağımsız hattı **v1.0.0** ile başlar; eski
+3.0.1 etiketi ortak paket sürümüydü. İşlem deterministiktir; alt ajan/model gerekmez.
 
 ## Yetki ve akış
 
-1. İsteği ayır: sürümü öğren/kontrol et → `check`; kur/güncelle → açık yazma yetkisi.
-   Sadece skill'in adının anılması veya analiz talebi güncelleme yetkisi vermez.
-2. Bu skill'in fiziksel klasörünü çöz. Üst klasör ortak `skills` köküdür; keşif
-   junction'ının kendisini değiştirme. İlk kurulumda kullanıcı hedefini esas al.
-3. `scripts/guncelle.py check --root "<ortak-skill-koku>"` çalıştır. Ağ/kimlik hatasını
-   'güncel' diye yorumlama. Release yoksa yayın yoktur; tahmin sürüm üretme.
-4. Açık güncelleme isteğinde `scripts/guncelle.py update --root "<ortak-skill-koku>"`
-   çalıştır. Bu komut yalnız daha yeni kararlı sürümü indirip doğrular ve iki skill'i
-   birlikte değiştirir. Şu an çalışan analiz varken güncelleme yapılmaz.
-5. Kurulu sürümleri ve `verify` çıktısını doğrula. Yeni skill sonraki turda kullanılabilir.
-   Hata, kısmi işlem veya kurtarma gereği varsa 'güncellendi' deme.
+1. Sürüm kontrolü → yalnız `check`; kur/güncelle → iki yönetilen skill'i yenileme
+   yetkisi. Aynı güncellemenin adımlarında yeniden onay isteme.
+2. Fiziksel ortak skill kökünü çöz; keşif junction'larını değiştirme.
+3. `python <bu-skill>/scripts/guncelle.py check --root "<fiziksel-skills>"`.
+   Ağ/kimlik hatası “güncel” değildir; yayımlanmamış sürümü var sayma.
+4. Açık güncellemede `python <bu-skill>/scripts/guncelle.py update --root
+   "<fiziksel-skills>"`. Yeni paket indirilip doğrulanır; eski iki skill ağacı
+   **tamamen** yenileriyle değiştirilir. Dosyaları üst üste ekleyip eski scriptleri bırakma.
+5. `verify --root "<fiziksel-skills>"` ile dosyaları ve iki ayrı skill sürümünü
+   doğrula. Başarıda eski ağaçlar silinir; kaldırıldığını ve yeni sürümleri bildir.
 
-Komutların başına ortamın Python 3.11+ çalıştırıcısını, script yoluna bu klasörün
-tam yolunu koy. Kullanıcıya gereksiz komut dökmek yerine sonucu ve engeli anlat.
-Ağ/yazma izinleri gerekiyorsa platformun izin mekanizmasını kullan; atlatma yapma.
+Yeni paket doğrulanmadan eski sürümü silme. Geçişte eski ağaçlar yalnız geri alma
+için geçici tutulur; başarılı kurulumda eski sürüm kopyası kalmaz. Yakalanan hatada
+önceki sürüm geri konur. Güç kesintisinde kalan işlem günlüğü/kilidi incelemeden silme.
 
-## İlk kurulum ve kaynak kopyasını kaydetme
+## İlk kurulum ve yerel geliştirme
 
-Resmî GitHub Release'ten `teklif-degerlendirme-vX.Y.Z.zip` ve aynı adlı `.sha256`
-dosyasını al. Release/tag/paket sürümü aynı olmalı. Kullanıcının seçtiği ortak köke:
-
-```text
-python guncelle.py install --root "<skills>" --archive "<paket.zip>" --sha256 "<64-karakter-sha256>"
-```
-
-Bu komut var olan yönetimsiz klasörün üzerine yazmaz. Bir önceki kaynak kurulumu
-paketle **tam eşleşiyorsa** (örneğin skill-installer ile iki yol birden kurulduysa):
+Resmî Release'teki `teklif-degerlendirme-vX.Y.Z.zip` ve `.zip.sha256` kullanılır.
+X.Y.Z paket etiketidir; manifestin `skill_versions` alanı bağımsız sürümleri taşır.
+Yalnız güncelleyici değişirse paket etiketi ilerletilebilir; ana skill zorla artırılmaz.
 
 ```text
-python guncelle.py register --root "<skills>" --archive "<paket.zip>" --sha256 "<64-karakter-sha256>"
+python guncelle.py install --root "<skills>" --archive "<paket.zip>" --sha256 "<64-karakter-hash>"
 python guncelle.py verify --root "<skills>"
 ```
 
-`register` skill dosyalarını değiştirmez; eşleşen dosya/sürüm envanterini kaydeder.
-v2 ile v3 eşleşmez; register bunu aşmak için kullanılmaz. Eski/yerel değişikliği
-koruyarak v3'e geçiş için ayrı, açık kapsamlı düzenleme gerekir.
+Açık kaynak geliştirme isteğinde test edilmiş yerel aday paket aynı `install`
+yoluyla kurulabilir; henüz yayımlanmamış sürümü GitHub'dan çekmeye çalışma.
+Yerel kurulum ve çevrimiçi yayın ayrı durumlardır.
 
-## Güvenlik sınırları
+Henüz yayımlanmamış aynı sürüm yerel adayını açık geliştirme kapsamında yeniden
+kurmak gerekirse `install --replace-local` kullanılabilir. Önceki ağaç yine tam
+doğrulanır; paket ve iki bileşen sürümü aynı olmalıdır. Normal `update` bu seçeneği
+kullanmaz; yayımlanmış sürüm içeriği değiştirilmez, yeni sürüm numarası çıkarılır.
 
-- Yalnız resmî HTTPS Release adresleri; hash ve paket içi dosya manifesti doğrulanır.
-  SHA-256 bağımsız yayıncı imzası değildir; GitHub hesap/depo güveni ayrıca önemlidir.
-- Kaynak teklif, rapor, kimlik bilgisi veya hafıza hiçbir sunucuya gönderilmez.
-- Yalnız iki skill dizini yönetilir. Yerel değişiklik ve bilinmeyen dosyada işlem durur;
-  kullanıcı dosyaları, junction/symlink ve başka skill'ler üzerine yazılmaz.
-- Analiz/güncelleme kilidini görürse durur. Eski kilit otomatik silinmez.
-- ZIP yol kaçışı, bağlantı, yinelenmiş dosya, büyük paket ve sürüm tutarsızlığı reddedilir.
-- Her iki yeni klasör hazır ve doğrulanmış olmadan mevcut kurulum değiştirilmez.
-  Yakalanan işlem hatasında eski sürüm geri konur. Güç kesintisi/süreç öldürülmesinde
-  işlem günlüğü ve kilit korunabilir; elle inceleme olmadan yeni işlem başlatma.
-- Sürüm düşürme/ön sürüm/yabancı depo/uzaktaki kurulum kodu çalıştırma yoktur.
-  Periyodik kontrol veya otomasyon kendiliğinden kurulmaz.
+Yönetimsiz kurulum otomatik silinmez. Paketle tam aynı kaynak kurulumunda
+`register --root ... --archive ... --sha256 ...` yalnız envanteri kaydeder.
+Yerel değişikliği `register` ile aşma. Şema 1'in eş-sürümlü paketinden şema 2'ye
+bir kerelik bağımsız numaralandırma geçişi desteklenir; sonraki bileşenler düşürülemez.
 
-Tam paket ve platform notları: `../teklif-degerlendirme/KURULUM.md`.
+## Güvenlik ve yayın sınırı
+
+- Yalnız resmî HTTPS Release; ZIP/hash/dosya manifesti doğrulanır. Hash yayıncı imzası değildir.
+- Teklif, fiyat, rapor, anahtar, sohbet ve hafıza dışarı gönderilmez.
+- Yalnız iki fiziksel skill ağacı yönetilir. Yerel değişiklik/bilinmeyen dosya veya
+  bağlantı üzerine yazılmaz; başka skill ve kullanıcı dosyası silinmez.
+- Eski global analiz kilidi, güncelleme kilidi veya yarım işlemde dur. Yeni analiz
+  kendi değişmez snapshot'ında sürer; güncelleme sırasında yeni snapshot hazırlanmaz.
+- ZIP yol kaçışı, bağlantı, çakışan ad, aşırı boyut ve sürüm tutarsızlığı reddedilir.
+- Sandbox/onay atlama, global ayar değişikliği, otomatik periyodik işlem ve indirilmiş
+  kurulum kodunu çalıştırma yoktur.
+- **GitHub yayını ayrı yetkidir:** geliştirme/yerel kurulum bittikten sonra push,
+  tag, Release veya yükleme öncesinde kullanıcı onayı al ve bekle. Model
+  değiştireceğini söylediyse o aşamada dur; “güncelle” talebini yayın onayı sayma.
+
+Paketleme: `../teklif-degerlendirme/KURULUM.md`. Yeni skill sonraki turda keşfedilir.

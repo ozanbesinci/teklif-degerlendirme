@@ -17,6 +17,7 @@ import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 import zipfile
 
 REPO = "ozanbesinci/teklif-degerlendirme"
@@ -40,6 +41,32 @@ def version(value):
     if not isinstance(value, str) or not SEMVER.fullmatch(value):
         raise UpdateError("Yalnız X.Y.Z kararlı sürümleri desteklenir.")
     return tuple(map(int, value.split(".")))
+
+
+def component_versions(manifest):
+    """Schema 1 paired releases remain readable; schema 2 versions are independent."""
+    version(manifest.get("version"))
+    if manifest.get("schema") == 1:
+        return {name: manifest["version"] for name in SKILLS}
+    versions = manifest.get("skill_versions")
+    if (manifest.get("schema") != 2 or manifest.get("versioning") != "independent/v1"
+            or not isinstance(versions, dict) or set(versions) != set(SKILLS)):
+        raise UpdateError("Bağımsız skill sürüm kaydı geçersiz.")
+    for item in versions.values():
+        version(item)
+    return versions
+
+
+def assert_upgrade(old, new):
+    if version(new["version"]) <= version(old["version"]):
+        raise UpdateError("Yalnız daha yeni paket sürümü kurulabilir.")
+    before, after = component_versions(old), component_versions(new)
+    for name in SKILLS:
+        # Old updater 3.x was a bundle label, not an independent semantic version.
+        migration = (name == SKILLS[1] and old.get("schema") == 1 and new.get("schema") == 2
+                     and version(after[SKILLS[0]]) > version(before[SKILLS[0]]))
+        if not migration and version(after[name]) < version(before[name]):
+            raise UpdateError(f"Skill sürümü düşürülmez: {name}")
 
 
 def sha(data):
@@ -111,9 +138,10 @@ def validate_archive(data, expected_sha, expected_version=None):
         manifest = json.loads(files.pop(MANIFEST).decode("utf-8"))
     except (KeyError, ValueError, UnicodeError) as exc:
         raise UpdateError("Sürüm manifesti yok veya bozuk.") from exc
-    if not isinstance(manifest, dict) or manifest.get("schema") != 1 or manifest.get("repository") != REPO:
+    if not isinstance(manifest, dict) or manifest.get("schema") not in {1, 2} or manifest.get("repository") != REPO:
         raise UpdateError("Manifest kaynağı/şeması geçersiz.")
     version(manifest.get("version"))
+    versions = component_versions(manifest)
     if expected_version and manifest["version"] != expected_version:
         raise UpdateError("Release ve paket sürümü farklı.")
     hashes = manifest.get("files")
@@ -122,22 +150,23 @@ def validate_archive(data, expected_sha, expected_version=None):
     for skill in SKILLS:
         prefix = f"skills/{skill}/"
         try:
-            if files[prefix + "VERSION"].decode("utf-8").strip() != manifest["version"]:
-                raise UpdateError("İki skill aynı sürümde değil.")
+            if files[prefix + "VERSION"].decode("utf-8").strip() != versions[skill]:
+                raise UpdateError(f"Skill sürümü manifestle farklı: {skill}")
             body = files[prefix + "SKILL.md"].decode("utf-8")
             front = body.split("\n---", 1)[0]
             declared_version = re.search(r'(?m)^  version: ["\x27]?([0-9]+\.[0-9]+\.[0-9]+)["\x27]?\s*$', front)
-            if not body.startswith("---\n") or f"name: {skill}\n" not in front + "\n" or not declared_version or declared_version[1] != manifest["version"]:
+            if not body.startswith("---\n") or f"name: {skill}\n" not in front + "\n" or not declared_version or declared_version[1] != versions[skill]:
                 raise UpdateError("Skill giriş dosyası geçersiz.")
         except (KeyError, UnicodeError) as exc:
             raise UpdateError("Paket zorunlu skill dosyası eksik.") from exc
-    try:
-        changelog = files["skills/teklif-degerlendirme/CHANGELOG.md"].decode("utf-8")
-        heading = re.search(r"(?m)^## v([0-9]+\.[0-9]+\.[0-9]+)\b", changelog)
-        if not heading or heading[1] != manifest["version"]:
-            raise UpdateError("CHANGELOG sürümü paketle aynı değil.")
-    except (KeyError, UnicodeError) as exc:
-        raise UpdateError("CHANGELOG eksik veya bozuk.") from exc
+    for skill in (SKILLS if manifest["schema"] == 2 else SKILLS[:1]):
+        try:
+            changelog = files[f"skills/{skill}/CHANGELOG.md"].decode("utf-8")
+            heading = re.search(r"(?m)^## v([0-9]+\.[0-9]+\.[0-9]+)\b", changelog)
+            if not heading or heading[1] != versions[skill]:
+                raise UpdateError(f"CHANGELOG sürümü skill ile aynı değil: {skill}")
+        except (KeyError, UnicodeError) as exc:
+            raise UpdateError("CHANGELOG eksik veya bozuk.") from exc
     return manifest, files
 
 
@@ -160,15 +189,16 @@ def tree_files(root):
 def verify_install(root):
     state = read_json(root / STATE)
     version(state.get("version"))
-    if state.get("schema") != 1 or state.get("repository") != REPO or not isinstance(state.get("files"), dict):
+    if state.get("schema") not in {1, 2} or state.get("repository") != REPO or not isinstance(state.get("files"), dict):
         raise UpdateError("Kurulum kayıt şeması bozuk.")
+    versions = component_versions(state)
     for path in state["files"]:
         safe_name(path)
     if tree_files(root) != state["files"]:
         raise UpdateError("Yerel dosya değişmiş, eksilmiş veya yönetilmeyen dosya eklenmiş; üzerine yazılmaz.")
     for skill in SKILLS:
         key = f"skills/{skill}/VERSION"
-        if key not in state["files"] or (root / skill / "VERSION").read_text(encoding="utf-8").strip() != state["version"]:
+        if key not in state["files"] or (root / skill / "VERSION").read_text(encoding="utf-8").strip() != versions[skill]:
             raise UpdateError("Kurulu sürümler eşleşmiyor.")
     return state
 
@@ -193,7 +223,7 @@ def update_lock(root):
         lock.unlink(missing_ok=True)
 
 
-def install(root, data, expected_sha, *, register=False, expected_version=None):
+def install(root, data, expected_sha, *, register=False, expected_version=None, replace_local=False):
     root = Path(root).resolve()
     manifest, files = validate_archive(data, expected_sha, expected_version)
     with update_lock(root):
@@ -207,11 +237,18 @@ def install(root, data, expected_sha, *, register=False, expected_version=None):
             write_json(root / STATE, manifest)
             return {"status": "registered", "version": manifest["version"]}
         old = verify_install(root) if (root / STATE).exists() else None
-        if old and version(manifest["version"]) <= version(old["version"]):
-            raise UpdateError("Yalnız daha yeni sürüm kurulabilir.")
+        if replace_local:
+            if register or expected_version is not None or not old or old["version"] != manifest["version"] or component_versions(old) != component_versions(manifest):
+                raise UpdateError("Yerel aday değişimi yalnız aynı paket/bileşen sürümlerindeki doğrulanmış kurulum içindir.")
+        elif old:
+            assert_upgrade(old, manifest)
         if not old and any((root / name).exists() or linked(root / name) for name in SKILLS):
             raise UpdateError("Yönetimsiz/eski kurulum üzerine yazılmaz.")
-        stage = Path(tempfile.mkdtemp(prefix=".teklif-stage-", dir=root))
+        # Python 3.13 Windows mkdtemp uses a private 0700 DACL. Moving its children
+        # into the installation can make them unreadable to sandboxed clients.
+        # Inherit the chosen installation root's existing permissions instead.
+        stage = root / (".teklif-stage-" + uuid.uuid4().hex)
+        stage.mkdir(mode=0o755, exist_ok=False)
         moved = []; placed = []; rollback_ok = True
         try:
             for relative, content in files.items():
@@ -252,7 +289,9 @@ def install(root, data, expected_sha, *, register=False, expected_version=None):
                 if stage.parent != root or not stage.name.startswith(".teklif-stage-") or linked(stage):
                     raise UpdateError("Geçici işlem yolu doğrulanamadı.")
                 shutil.rmtree(stage)
-        return {"status": "installed", "version": manifest["version"]}
+        return {"status": "installed", "version": manifest["version"],
+                "skill_versions": component_versions(manifest), "replacement": "full-tree",
+                "previous_version_removed": old is not None}
 
 
 def allowed_url(url):
@@ -305,14 +344,16 @@ def latest_release():
 
 def check(root):
     root = Path(root).resolve()
-    installed = None; managed = (root / STATE).exists()
+    installed = None; installed_skills = None; managed = (root / STATE).exists()
     if managed:
-        installed = verify_install(root)["version"]
+        state = verify_install(root)
+        installed = state["version"]; installed_skills = component_versions(state)
     release = latest_release()
     if release is None:
         return {"status": "no_release_or_repository_not_accessible", "installed": installed, "managed": managed}
     newer = installed is None or version(release["version"]) > version(installed)
-    return {"status": "available" if newer else "up_to_date", "installed": installed, "managed": managed, "release": release}
+    return {"status": "available" if newer else "up_to_date", "installed": installed,
+            "installed_skills": installed_skills, "managed": managed, "release": release}
 
 
 def main(argv=None):
@@ -321,14 +362,18 @@ def main(argv=None):
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--archive", type=Path)
     parser.add_argument("--sha256")
+    parser.add_argument("--replace-local", action="store_true", help="Yalnız açık yerel geliştirmede aynı sürüm adayını yeniden kur; normal update kullanmaz.")
     args = parser.parse_args(argv)
     try:
+        if args.replace_local and args.action != "install":
+            raise UpdateError("--replace-local yalnız yerel install eyleminde kullanılabilir.")
         if args.action == "verify":
-            result = {"status": "verified", "version": verify_install(args.root.resolve())["version"]}
+            state = verify_install(args.root.resolve())
+            result = {"status": "verified", "version": state["version"], "skill_versions": component_versions(state)}
         elif args.action in {"install", "register"}:
             if not args.archive or not args.sha256:
                 raise UpdateError("Yerel paket ve doğrulanmış --sha256 gerekli.")
-            result = install(args.root, args.archive.read_bytes(), args.sha256, register=args.action == "register")
+            result = install(args.root, args.archive.read_bytes(), args.sha256, register=args.action == "register", replace_local=args.replace_local)
         else:
             result = check(args.root)
             if args.action == "update" and result["status"] == "available":

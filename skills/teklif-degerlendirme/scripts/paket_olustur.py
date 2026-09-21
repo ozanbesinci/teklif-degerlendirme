@@ -16,20 +16,20 @@ DIRECTORIES = {"references", "scripts", "config", "agents"}
 EXTENSIONS = {".md", ".py", ".json", ".yaml", ".toml"}
 
 
-def build(root: Path, output: Path):
+def build(root: Path, output: Path, release_version=None):
     root = root.resolve(); output = output.resolve()
     if output.is_relative_to(root):
         raise ValueError("Paket çıktısı ortak skills ağacının dışında olmalı.")
     if output.exists() or output.with_suffix(output.suffix + ".sha256").exists():
         raise ValueError("Var olan paket/hash üzerine yazılmaz; yeni çıktı konumu seçin.")
-    files = {}; versions = set()
+    files = {}; versions = {}
     for skill in SKILLS:
         folder = root / skill
         if folder.is_symlink() or (hasattr(folder, "is_junction") and folder.is_junction()):
             raise ValueError("Kaynak skill dizini fiziksel olmalı, keşif bağlantısı değil.")
         if output.is_relative_to(folder):
             raise ValueError("Paket çıktısı skill dizininde olamaz.")
-        versions.add((folder / "VERSION").read_text(encoding="utf-8").strip())
+        versions[skill] = (folder / "VERSION").read_text(encoding="utf-8").strip()
         for path in sorted(folder.rglob("*")):
             if path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction()):
                 raise ValueError("Paket kaynağında bağlantı var.")
@@ -40,14 +40,13 @@ def build(root: Path, output: Path):
                     (rel.parts[0] in DIRECTORIES and path.suffix in EXTENSIONS and not any(p.startswith(".") for p in rel.parts))):
                 raise ValueError(f"Dağıtım izin listesi dışında dosya: {skill}/{rel.as_posix()}")
             files[f"skills/{skill}/{rel.as_posix()}"] = path.read_bytes()
-    if len(versions) != 1:
-        raise ValueError("İki skill aynı sürümde değil.")
-    release_version = versions.pop()
+    release_version = release_version or versions[SKILLS[0]]
     # Import local validator only; no downloaded script is executed.
     sys.path.insert(0, str(root / SKILLS[1] / "scripts"))
     from guncelle import validate_archive, version
     version(release_version)
-    manifest = {"schema": 1, "repository": "ozanbesinci/teklif-degerlendirme", "version": release_version,
+    manifest = {"schema": 2, "repository": "ozanbesinci/teklif-degerlendirme", "version": release_version,
+                "versioning": "independent/v1", "skill_versions": versions,
                 "files": {name: hashlib.sha256(data).hexdigest() for name, data in sorted(files.items())}}
     files["release-manifest.json"] = (json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
     buffer = io.BytesIO()
@@ -76,5 +75,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skills-root", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--release-version", help="Paket etiketi; varsayılan ana skill sürümü. Yalnız updater değiştiğinde ayrı paket etiketi kullanılabilir.")
     args = parser.parse_args()
-    print(json.dumps(build(args.skills_root, args.output), ensure_ascii=False))
+    print(json.dumps(build(args.skills_root, args.output, args.release_version), ensure_ascii=False))
