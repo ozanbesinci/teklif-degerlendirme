@@ -1,33 +1,110 @@
 {
-  "policy_version": "3.1.1",
-  "transfer_scope": "User-requested analysis through the already configured OpenAI account and allowed roles; no duplicate coordinator/reviewer consent. No new provider, external recipient, publication or permission bypass is authorized.",
+  "policy_version": "4.0.0",
+  "execution": "native_subagents",
+  "model_selection": "latest_available_per_family_at_run_start",
+  "allowed_families": [
+    "sol",
+    "terra"
+  ],
+  "forbidden_families": [
+    "luna",
+    "astra",
+    "jev"
+  ],
   "max_coordinator_workers": 3,
-  "budgets": {
-    "max_dispatches": 10,
-    "max_revision_dispatches": 4,
-    "max_input_tokens": 80000000,
-    "max_output_tokens": 750000,
-    "max_wall_seconds": 5400,
-    "max_dispatch_seconds": 1200
+  "allow_resume": false,
+  "allow_worker_dispatch": false,
+  "fast_profile_amount_limit": null,
+  "profiles": {
+    "hizli": {
+      "max_input_tokens": 8000000,
+      "max_wall_seconds": 1500,
+      "max_revisions": 1
+    },
+    "standart": {
+      "max_input_tokens": 25000000,
+      "max_wall_seconds": 3600,
+      "max_revisions": 1
+    },
+    "yuksek_guvence": {
+      "max_input_tokens": 50000000,
+      "max_wall_seconds": 7200,
+      "max_revisions": 2
+    }
+  },
+  "main_session": {
+    "allowed_families": [
+      "sol",
+      "terra"
+    ],
+    "selection": "latest_available",
+    "reasoning_effort": "user_selected"
   },
   "roles": {
-    "coordinator": {"model": "gpt-5.6-sol", "reasoning_effort": "high", "can_dispatch": true},
-    "reviewer": {"model": "gpt-5.6-sol", "reasoning_effort": "high", "independent_required": true},
-    "extraction": {"model": "gpt-5.6-terra", "reasoning_effort": "medium"},
-    "extraction_difficult": {"model": "gpt-5.6-terra", "reasoning_effort": "high"},
-    "requirements": {"model": "gpt-5.6-terra", "reasoning_effort": "high"},
-    "technical": {"model": "gpt-5.6-terra", "reasoning_effort": "high"},
-    "financial": {"model": "gpt-5.6-terra", "reasoning_effort": "high"},
-    "contracts": {"model": "gpt-5.6-terra", "reasoning_effort": "high"},
-    "classifier": {"model": "gpt-5.6-terra", "reasoning_effort": "medium"},
-    "classifier_complex": {"model": "gpt-5.6-terra", "reasoning_effort": "medium"},
-    "critical_adjudicator": {"model": "gpt-6-astra", "reasoning_effort": "high", "conditional": true}
+    "extraction": {
+      "family": "terra",
+      "reasoning_effort": "medium"
+    },
+    "extraction_difficult": {
+      "family": "terra",
+      "reasoning_effort": "high"
+    },
+    "requirements": {
+      "family": "terra",
+      "reasoning_effort": "high"
+    },
+    "targeted_review": {
+      "family": "terra",
+      "reasoning_effort": "high",
+      "profiles": [
+        "hizli"
+      ]
+    },
+    "blind_review": {
+      "family": "sol",
+      "reasoning_effort": "high",
+      "profiles": [
+        "standart",
+        "yuksek_guvence"
+      ]
+    },
+    "adjudicator": {
+      "family": "sol",
+      "reasoning_effort": "high"
+    },
+    "technical": {
+      "family": "terra",
+      "reasoning_effort": "high",
+      "profiles": [
+        "yuksek_guvence"
+      ]
+    },
+    "financial": {
+      "family": "terra",
+      "reasoning_effort": "high",
+      "profiles": [
+        "yuksek_guvence"
+      ]
+    },
+    "contracts": {
+      "family": "terra",
+      "reasoning_effort": "high",
+      "profiles": [
+        "yuksek_guvence"
+      ]
+    },
+    "decision_summary": {
+      "family": "sol",
+      "reasoning_effort": "high"
+    }
   },
-  "forbidden_models": ["gpt-5.6-luna"],
-  "worker_config": {"agents.enabled": false},
+  "budget_counting": "last_cumulative_once_per_unique_session_plus_main_delta",
+  "budget_warning_ratio": 0.8,
+  "transfer_scope": "User-requested analysis within the configured OpenAI account; no repeated consent per allowed role. New providers, recipients and publication require separate authorization.",
   "notes": [
-    "Role, model and reasoning effort are selected only from this policy; CLI overrides are intentionally absent.",
-    "caller identity is an asserted workflow field, not cryptographic authentication.",
-    "No retry/fallback role or model is configured."
-  ]
+    "Resolve real offered model IDs and supported efforts for every new run; no fabricated aliases or silent fallback.",
+    "Record actual session model and reasoning effort, not only requested values.",
+    "Business rules remain source-backed; incomplete critical evidence prevents a final recommendation."
+  ],
+  "catalog_max_age_seconds": 300
 }

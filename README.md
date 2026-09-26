@@ -11,7 +11,16 @@ Güncel kararlı paket: **v3.1.1**
 
 Ana skill: **3.1.1** · Güncelleyici: **1.0.0**
 
-## Mimari özeti
+## v4.0.0 aday dalı
+
+Bu dalda ana skill **4.0.0**, güncelleyici **1.1.0** kaynakları bulunur.
+**Kararlı Release değildir.** Canlı kabul tamamlanmadı. Aday kaynaklar ve
+manifest incelenebilir; güncelleyici kararlı v3.1.1 Release'i göstermeyi sürdürür.
+
+Canlı testte kullanılan teklifler, şartname, fiyatlar, analiz dosyaları ve
+oturum kayıtları bu depoya eklenmedi.
+
+## Kararlı v3.1.1 mimari özeti
 
 - Ana ajan ve bağımsız nihai denetçi: `gpt-5.6-sol` / high
 - Uzman alt ajanlar: `gpt-5.6-terra` / medium veya high
