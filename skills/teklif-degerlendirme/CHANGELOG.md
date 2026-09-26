@@ -9,6 +9,19 @@ Sürüm numarası kuralı: **büyük** (omurga değişti, çıktı yapısı değ
 
 ---
 
+## v4.0.0 — 2026-09-26 — yerel canlı test adayı
+
+- Üç kullanıcı seçimli profil eklendi: hızlı, standart, yüksek güvence; kapsam, çıktı ve bütçe buna bağlandı.
+- Model kimliği sabitlemesi kaldırıldı; her yeni analizde gerçek katalogdan Sol/Terra ailesinin erişilebilir en yeni sürümü çözülür, fiili oturum modeli ve eforu doğrulanır.
+- Yerleşik alt ajan akışı ve her görevde yeni dar oturum getirildi; CLI model çalıştırma, oturum devamı, Astra ve Jev görevleri kaldırıldı. Luna yasağı korundu.
+- Teklif/şartname çıkarımı, özgün PDF'ten bağımsız kör okuma, kod karşılaştırması ve dar Sol hakem ayrıldı; hızlıda kritik sayfa görüntülerinin hedefli kontrolü kullanılır.
+- Merkezi veri, muhataplı RFI, kaynak tamlığı ve kanıtlı düzeltme sözleşmesi eklendi; düzeltme sonrası etkilenen hesap/çıktı yeniden doğrulanır.
+- Bütçe sayımı benzersiz oturumun son birikimli toplamı ve ana sohbet farkına çevrildi; alt ajanlar sayılır, bilinmeyen tüketim sıfır değildir.
+- Profil bazlı Excel ve sabit Python + pywin32 yeniden hesaplama, bağımsız mutabakat ve geri alınan parametre testi eklendi; yüksek güvencede PDF zorunludur.
+- Ortam Python 3.14 ve program-guncelle'nin sabit paket sürümleriyle hizalandı; Python/kütüphane kurulum dosyaları bu pakete gömülmez.
+- Kaynakla teyitli sıfır fiyat kabulü ve bilinmeyen maliyet kaydı düzeltildi; geçerli boş metin formülü ile bozuk sayısal önbellek ayrıldı.
+- Canlı kabul verisi kullanıcıdan gelecek. Bu kayıt performans veya canlı test başarısı iddiası değildir; GitHub yayını ayrı yetki gerektirir.
+
 ## v3.1.1 — 2026-09-21
 
 - CLI devamlarında mantıksal `task_id` sabitlendi; coordinator ve reviewer sonuçları

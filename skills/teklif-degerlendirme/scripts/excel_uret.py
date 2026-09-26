@@ -1,164 +1,428 @@
-"""Reusable preliminary-offer workbook renderer. Never certifies a final award.
-
-Requires openpyxl. Formula caches are intentionally NOT fabricated; recalculate in
-Excel/LibreOffice and run the output gate before a verified delivery.
-"""
+"""V4 workbook and independently checkable calculation contract. No cached values."""
 from __future__ import annotations
-
 import argparse
+import copy
 import datetime as dt
+from decimal import Decimal
 import hashlib
 import json
 import math
 from pathlib import Path
 import textwrap
+from teklif_motoru import cost_summary, price_line, score_suppliers
+from veri_kontrol import digest, bound_scoring
+
+PROFILES = {'hizli', 'standart', 'yuksek_guvence'}
+CORE = ['Özet', 'Karar Özeti', 'Fiyat ve Kapsam', 'RFI']
+MONEY = '#,##0.00;[Red](#,##0.00);0.00'
+PROFILE_LABELS = {'hizli': 'Hızlı', 'standart': 'Standart', 'yuksek_guvence': 'Yüksek güvence'}
+
+
+def sensitivity_specs(scoring):
+    criteria = scoring['criteria']; specs = scoring.get('sensitivity', [])
+    if len(criteria) == 1:
+        if specs: raise ValueError('Tek kriterde farklı ağırlık senaryosu kurulamaz.')
+        return []
+    ids = {c['criterion_id'] for c in criteria}; base = {c['criterion_id']: Decimal(str(c['weight'])) for c in criteria}
+    if len(specs) < 2: raise ValueError('Baz yanında en az iki ağırlık senaryosu gerekli.')
+    seen_ids, seen_weights = set(), {tuple(sorted(base.items()))}
+    for spec in specs:
+        sid = spec.get('id'); weights = spec.get('weights', {})
+        if not sid or sid in seen_ids or set(weights) != ids: raise ValueError('Duyarlılık kimliği/ağırlık kapsamı geçersiz.')
+        parsed = {k: Decimal(str(v)) for k, v in weights.items()}
+        if any(not v.is_finite() or v < 0 for v in parsed.values()) or sum(parsed.values()) != 100:
+            raise ValueError('Her duyarlılık ağırlık toplamı 100 olmalı.')
+        signature = tuple(sorted(parsed.items()))
+        if signature in seen_weights: raise ValueError('Duyarlılık senaryosu bazdan ve diğerlerinden farklı olmalı.')
+        seen_ids.add(sid); seen_weights.add(signature)
+    return specs
+
+
+def file_hash(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def normalized(value):
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError('Sonlu sayı gerekli.')
+        return str(value)
+    if isinstance(value, dict):
+        return {k: normalized(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [normalized(v) for v in value]
+    return value
 
 
 def number(value, *, missing=True):
     if value is None and missing:
-        return
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
-        raise ValueError("Tutar/miktar negatif olmayan sonlu sayı veya null olmalı.")
+        return None
+    if isinstance(value, bool):
+        raise ValueError('Boolean sayı değildir.')
+    try:
+        n = Decimal(str(value))
+    except Exception as e:
+        raise ValueError('Geçerli ondalık sayı gerekli.') from e
+    if not n.is_finite() or not math.isfinite(float(n)):
+        raise ValueError('Sonlu Excel sayısı gerekli.')
+    return float(n)
 
 
 def validate(data):
-    if data.get("schema") != "teklif-workbook/v1" or data.get("analysis_mode") != "preliminary":
-        raise ValueError("Bu standart şablon yalnız açıkça işaretli ön sonuç içindir.")
-    if data.get("recommendation") is not None:
-        raise ValueError("Ön sonuç şablonu kesin firma önerisi içeremez.")
-    dt.date.fromisoformat(data["analysis_date"])
-    if not isinstance(data.get("project"), str) or not data["project"].strip():
-        raise ValueError("Proje adı gerekli.")
-    offers = data.get("offers")
+    if data.get('schema') != 'teklif-data/v4':
+        raise ValueError('Merkezi veri şeması teklif-data/v4 olmalı.')
+    dt.date.fromisoformat(data['analysis_date'])
+    if not isinstance(data.get('project'), str) or not data['project'].strip():
+        raise ValueError('Proje adı gerekli.')
+    offers = data.get('offers')
     if not isinstance(offers, list) or not offers:
-        raise ValueError("En az bir teklif gerekli.")
-    ids = [offer["id"] for offer in offers]
-    if not all(isinstance(x, str) and x for x in ids) or len(ids) != len(set(ids)):
-        raise ValueError("Teklif kimlikleri benzersiz olmalı.")
-    for offer in offers:
-        if not offer.get("name") or not offer.get("currency") or not offer.get("lines"):
-            raise ValueError("Firma/para birimi/kalem gerekli.")
-        number(offer.get("declared_total"))
-        line_ids = set()
-        for line in offer["lines"]:
-            if not line.get("id") or line["id"] in line_ids or not line.get("source"):
-                raise ValueError("Kalem kimliği ve kaynak gerekli; tekrar olamaz.")
-            line_ids.add(line["id"])
-            number(line.get("quantity")); number(line.get("unit_price"))
-    seen = set()
-    for item in data.get("scope_items", []):
-        if not item.get("id") or item["id"] in seen or not item.get("source"):
-            raise ValueError("Kapsam kimliği/kaynağı gerekli; aynı maliyet iki kez yazılamaz.")
-        seen.add(item["id"]); number(item.get("amount"))
-        if item.get("classification") == "5-A":
-            if item.get("offer_id") not in ids:
-                raise ValueError("5-A kalemi firma bazlı olmalı.")
-        elif item.get("classification") == "5-B":
-            allocations = item.get("allocations", [])
-            if len(allocations) != len(ids) or {a.get("offer_id") for a in allocations} != set(ids):
-                raise ValueError("5-B için bütün firmalarda eşit kapsam kanıtı gerekli.")
-            values = set()
-            for a in allocations:
-                number(a.get("amount"), missing=False)
-                dt.date.fromisoformat(a["payment_date"])
-                if not a.get("source") or not a.get("currency"):
-                    raise ValueError("5-B kanıtı/para birimi eksik.")
-                values.add((a["amount"], a["currency"], a["payment_date"]))
-            if len(values) != 1 or next(iter(values))[:2] != (item.get("amount"), item.get("currency")):
-                raise ValueError("Firma bazlı farklı/eksik tutar veya ödeme tarihi ortak 5-B olamaz.")
-        else:
-            raise ValueError("Kapsam sınıfı 5-A veya kanıtlı 5-B olmalı.")
+        raise ValueError('En az bir teklif gerekli.')
+    ids = [o.get('id') for o in offers]
+    if any(not isinstance(x, str) or not x.strip() for x in ids) or len(set(ids)) != len(ids):
+        raise ValueError('Teklif kimlikleri benzersiz olmalı.')
+    if set(data.get('costs', {})) - set(ids):
+        raise ValueError('Maliyet bilinmeyen firmaya bağlı.')
+    for p in data.get('costs', {}).values():
+        cost_summary(normalized(p))
+    for o in offers:
+        if not o.get('name'):
+            raise ValueError('Firma adı gerekli.')
+        for line in o.get('lines', []):
+            if all(line.get(k) is not None for k in ('quantity', 'unit_price', 'vat_rate')):
+                price_line(normalized(line))
+    if data.get('scoring'):
+        if len({o.get('supplier_id', o['id']) for o in offers}) < 2:
+            raise ValueError('Tek bağımsız tedarikçi puanlanamaz.')
+        if set(data.get('costs', {})) != set(ids) or any(cost_summary(normalized(p))['status'] != 'complete_cost_inputs' for p in data['costs'].values()):
+            raise ValueError('Eksik maliyetle puanlama yapılamaz.')
+        score_suppliers(bound_scoring(normalized(data), {oid: cost_summary(normalized(p)) for oid, p in data['costs'].items()}))
+        sensitivity_specs(data['scoring'])
     return data
 
 
-def build(data, output):
+def build(data, output, profile='standart', inventory=None, qa=None, decision=None):
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter as colname
     from openpyxl.workbook.properties import CalcProperties
     validate(data)
-    output = Path(output)
-    if output.exists():
-        raise ValueError("Var olan çıktı üzerine yazılmaz; yeni revizyon adı seçin.")
-    wb = Workbook()
-    wb.remove(wb.active)
-    tabs = {name: wb.create_sheet(name) for name in ("Karar Özeti", "Teklifler", "Kalemler", "Kapsam ve RFI", "Parametreler")}
+    if profile not in PROFILES:
+        raise ValueError('Profil geçersiz.')
+    if qa is not None and (qa.get('status') != 'PASS' or qa.get('data_sha256') != digest(data)):
+        raise ValueError('Tamlık kontrolü geçmemiş veya başka veriye bağlı.')
+    if decision is not None and (decision.get('data_sha256') != digest(data) or not isinstance(decision.get('summary'), str) or not decision['summary'].strip()):
+        raise ValueError('Hakem özeti güncel merkezi veriye bağlı değil.')
+    output = Path(output).resolve(); cp = output.with_suffix(output.suffix + '.contract.json')
+    if output.exists() or cp.exists():
+        raise ValueError('Var olan çıktı üzerine yazılmaz; yeni revizyon adı seçin.')
+    version = Path(__file__).resolve().parents[1].joinpath('VERSION').read_text(encoding='utf-8').strip()
+    tabs = list(CORE)
+    if profile != 'hizli':
+        tabs += ['Elemeli Değerlendirme', 'Ticari ve Sözleşme', 'Kaynaklar']
+        if data.get('requirements'): tabs += ['Şartname Uygunluğu']
+        if data.get('scoring'): tabs += ['Puanlama']
+    if profile == 'yuksek_guvence': tabs += ['Yeterlilik ve Risk', 'Uzman Teyidi']
+    modules = {'import': 'İthalat', 'financing': 'Finansman', 'tco': 'TCO', 'cash': 'Nakit', 'stock': 'Stok', 'quality': 'Kalite'}
+    if profile != 'hizli': tabs += [v for k, v in modules.items() if data.get('modules', {}).get(k)]
+    if data.get('change_log'): tabs += ['Değişim Kaydı']
+    wb = Workbook(); wb.remove(wb.active)
+    sheets = {n: wb.create_sheet(n) for n in tabs}
+    contract = {'schema': 'teklif-excel-contract/v4', 'profile': profile, 'version': version, 'data_sha256': digest(data),
+                'inventory_sha256': digest(inventory) if inventory is not None else None, 'qa_sha256': digest(qa) if qa is not None else None, 'inputs': [], 'outputs': [],
+                'formulas': [], 'sheets': tabs, 'pdf_required': profile == 'yuksek_guvence',
+                'decision_sha256': digest(decision) if decision is not None else None, 'decision_cells': []}
+    facts = {f['fact_id']: f for f in data.get('facts', [])}
+    sources = {}
+    for source in (inventory or {}).get('entries', []):
+        s = dict(source)
+        if not s.get('path') and s.get('relative_path') and (inventory or {}).get('root'):
+            root = Path(inventory['root']).resolve(); p = (root / s['relative_path']).resolve()
+            if not p.is_relative_to(root): raise ValueError('Kaynak bağlantısı envanter kökü dışına çıkıyor.')
+            s['path'] = str(p)
+        sources[s['source_id']] = s
 
-    def row(sheet, values, *, header=False):
-        sheet.append(values)
-        for cell in sheet[sheet.max_row]:
-            if isinstance(cell.value, str):
-                cell.data_type = "s"  # Source text is never an executable Excel formula.
-            cell.alignment = Alignment(vertical="top", wrap_text=True)
-            cell.font = Font(name="Calibri", size=11, bold=header, color="FFFFFF" if header else "17324D")
-            if header:
-                cell.fill = PatternFill("solid", fgColor="17324D")
-        sheet.row_dimensions[sheet.max_row].height = 32 if header else 36
-        return sheet.max_row
+    def row(ws, values, header=False):
+        ws.append(values or [None])
+        for c in ws[ws.max_row]:
+            if isinstance(c.value, str): c.data_type = 's'
+            c.font = Font(name='Arial', size=10, bold=header, color='FFFFFF' if header else '17324D')
+            c.alignment = Alignment(vertical='top', wrap_text=True)
+            if header: c.fill = PatternFill('solid', fgColor='17324D')
+        ws.row_dimensions[ws.max_row].height = 30 if header else 25
+        return ws.max_row
 
-    summary = tabs["Karar Özeti"]
-    row(summary, [data["project"], "ÖN SONUÇ — KESİN SATINALMA ÖNERİSİ DEĞİLDİR"], header=True)
-    paragraphs = ["Bilinen teklif bedelleri eşit kapsamlı nihai maliyet değildir. Eksik bilgi sıfır kabul edilmez."] + data.get("summary", [])
-    for text in paragraphs:
-        for part in textwrap.wrap(str(text), width=95, break_long_words=True) or [""]:
-            i = row(summary, [part]); summary.merge_cells(start_row=i, start_column=1, end_row=i, end_column=2)
-            summary.row_dimensions[i].height = 42
-    line_sheet = tabs["Kalemler"]
-    row(line_sheet, ["Firma", "Kalem", "Miktar", "Birim fiyat", "Hesap tutarı", "Döviz", "Kaynak"], header=True)
-    offers_sheet = tabs["Teklifler"]
-    row(offers_sheet, ["Firma", "Döviz", "Beyan toplamı", "Bilinen kalem toplamı", "Fiyatı eksik kalem", "Uyarı"], header=True)
-    for offer in data["offers"]:
-        start = line_sheet.max_row + 1
-        for item in offer["lines"]:
-            n = row(line_sheet, [offer["name"], item.get("description", item["id"]), item.get("quantity"), item.get("unit_price"), None, offer["currency"], item["source"]])
-            line_sheet.cell(n, 5, f'=IF(COUNT(C{n}:D{n})=2,C{n}*D{n},"")')
-            for col in (3, 4): line_sheet.cell(n, col).font = Font(name="Calibri", size=11, color="0000FF")
-            for col in (4, 5): line_sheet.cell(n, col).number_format = '#,##0.00'
-        end = line_sheet.max_row
-        n = row(offers_sheet, [offer["name"], offer["currency"], offer.get("declared_total"), None, None, "Nihai KTM değil; kapsam ve bilgi talepleri açık"])
-        offers_sheet.cell(n, 4, f"=SUM('Kalemler'!E{start}:E{end})")
-        offers_sheet.cell(n, 5, f"=COUNTBLANK('Kalemler'!E{start}:E{end})")
-        for col in (3, 4): offers_sheet.cell(n, col).number_format = '#,##0.00'
-    scope = tabs["Kapsam ve RFI"]
-    row(scope, ["Kimlik", "Firma/sınıf", "Konu", "Tutar", "Döviz", "Bilgi talebi", "Kaynak"], header=True)
-    for item in data.get("scope_items", []):
-        row(scope, [item["id"], (item.get("offer_id") or "ORTAK") + " / " + item["classification"], item.get("description"), item.get("amount"), item.get("currency"), item.get("rfi"), item["source"]])
-    for item in data.get("rfi", []):
-        row(scope, [item.get("id"), item.get("owner"), item.get("question"), None, None, "YANIT BEKLENİYOR", item.get("source")])
-    params = tabs["Parametreler"]
-    row(params, ["Parametre", "Değer"], header=True)
-    row(params, ["Analiz tarihi", dt.datetime.combine(dt.date.fromisoformat(data["analysis_date"]), dt.time())])
-    params["B2"].number_format = "yyyy-mm-dd"
-    row(params, ["Mod", "preliminary"])
-    row(params, ["Çalışma girdisi SHA-256 (kanonik JSON)", hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()])
-    row(params, ["Doğrulama", "Gerçek yeniden hesaplama, parametre testi ve bağımsız görsel kontrol bekliyor"])
-    for sheet in wb:
-        sheet.freeze_panes = "A2"
-        sheet.sheet_view.showGridLines = False
-        sheet.auto_filter.ref = sheet.dimensions if sheet.title not in {"Karar Özeti", "Parametreler"} else None
-        sheet.page_setup.orientation = "landscape"
-        sheet.page_setup.paperSize = sheet.PAPERSIZE_A3
-        sheet.page_setup.fitToWidth = 1; sheet.page_setup.fitToHeight = 0
-        sheet.sheet_properties.pageSetUpPr.fitToPage = True
-        sheet.print_title_rows = "1:1"
-        for col in sheet.columns:
-            sheet.column_dimensions[col[0].column_letter].width = 24
-        if sheet.max_column >= 3: sheet.column_dimensions["C"].width = 40
-        if sheet.max_column >= 6: sheet.column_dimensions["F"].width = 45
-        if sheet.max_column >= 7: sheet.column_dimensions["G"].width = 45
-        # Long source/RFI text expands rather than shrinking fonts or clipping silently.
-        for cells in sheet.iter_rows(min_row=2):
-            lines = max((math.ceil(len(str(c.value or "")) / max(12, sheet.column_dimensions[c.column_letter].width - 2)) for c in cells if c.value is not None), default=1)
-            sheet.row_dimensions[cells[0].row].height = max(sheet.row_dimensions[cells[0].row].height or 36, min(400, 16 * lines + 8))
-    summary.column_dimensions["A"].width = 45; summary.column_dimensions["B"].width = 65
-    params.column_dimensions["B"].width = 90
+    def prose(ws, value):
+        if isinstance(value, (dict, list)): value = json.dumps(value, ensure_ascii=False)
+        for para in str(value or '').splitlines() or ['']:
+            for part in textwrap.wrap(para, 105, break_long_words=True) or ['']:
+                n = row(ws, [part]); ws.merge_cells(start_row=n, start_column=1, end_row=n, end_column=6)
+                ws.row_dimensions[n].height = 30
+
+    def formula(ws, cell, value, descriptor=None):
+        ws[cell] = value; ws[cell].font = Font(name='Arial', size=10, color='000000'); ws[cell].number_format = MONEY
+        contract['formulas'].append({'sheet': ws.title, 'cell': cell, 'formula': value})
+        if descriptor: contract['outputs'].append({'sheet': ws.title, 'cell': cell, **descriptor})
+
+    def inp(ws, cell, value, path, kind='number'):
+        if value is None: ws[cell] = None
+        elif kind == 'date':
+            ws[cell] = dt.datetime.combine(dt.date.fromisoformat(value), dt.time()); ws[cell].number_format = 'yyyy-mm-dd'
+        else:
+            ws[cell] = number(value, missing=False); ws[cell].number_format = MONEY
+        ws[cell].font = Font(name='Arial', size=10, color='0000FF')
+        contract['inputs'].append({'sheet': ws.title, 'cell': cell, 'path': path, 'kind': kind, 'default': value})
+
+    def citation(item):
+        ids = list(item.get('fact_ids', [])) + list(item.get('bindings', {}).values())
+        if item.get('fact_id'): ids += [item['fact_id']]
+        refs, paths = [], []
+        for fid in dict.fromkeys(ids):
+            fact = facts.get(fid, {}); src = sources.get(fact.get('source_id'), {})
+            name = src.get('name') or Path(src.get('path', fact.get('source_id', ''))).name
+            if name: refs.append(f"{name} · {fact.get('location', '')}")
+            if src.get('path'): paths.append(src['path'])
+        return '; '.join(dict.fromkeys(refs)) or str(item.get('source', 'Kaynak bağı merkezi veride')), paths
+
+    def evidence(ws, cell, item):
+        text, paths = citation(item); ws[cell] = text; ws[cell].data_type = 's'
+        if profile == 'yuksek_guvence' and paths:
+            p = Path(paths[0]).resolve()
+            if not p.is_file(): raise ValueError(f'Kanıt bağlantısı bulunamadı: {p.name}')
+            ws[cell].hyperlink = p.as_uri(); ws[cell].font = Font(name='Arial', size=10, color='0563C1', underline='single')
+
+    for ws in sheets.values():
+        row(ws, []); row(ws, [ws.title]); row(ws, [])
+        ws['A2'].font = Font(name='Arial', size=15, bold=True, color='17324D')
+    summary = sheets['Özet']
+    label = ('DOĞRULAMA TASLAĞI' if qa is None or decision is None else
+             'ÖN SONUÇ — KESİN SATINALMA ÖNERİSİ DEĞİLDİR' if qa.get('open_issues') else 'SATINALMA KARAR DOSYASI')
+    for text in [data['project'], label,
+                 f'Bu analiz teklif-degerlendirme {version} ile üretilmiştir. Profil: {PROFILE_LABELS[profile]}.',
+                 'Mavi değerler düzenlenebilir. Bilinmeyen tutarlar boştur; bilinen ara toplam nihai KTM değildir.']:
+        prose(summary, text)
+    analysis_row = row(summary, ['Analiz tarihi', None])
+    inp(summary, f'B{analysis_row}', data['analysis_date'], ['analysis_date'], 'date')
+    selection = data.get('profile_selection', {})
+    if selection.get('downgraded'):
+        prose(summary, f"Profil kullanıcı tarafından düşürüldü: {selection.get('recommended')} önerildi; {profile} seçildi. Kör okuma {'yapılmadı' if profile == 'hizli' else 'profil kapsamında'}.")
+    row(summary, ['Firma', 'Döviz', 'Bilinen nominal', 'Bilinen NBD', 'Baz döviz', 'Baz NBD', 'Durum'], True)
+    ws = sheets['Fiyat ve Kapsam']; prose(ws, 'Benzersiz maliyet olayları. NBD: yıllık efektif oran, ACT/365. Farklı dövizler doğrudan toplanmaz.')
+    row(ws, ['Firma', 'Parametre', 'Değer', 'Döviz', 'Dayanak'], True)
+    params = {}; offer_base_cells = {}
+    for oid, p in data.get('costs', {}).items():
+        assumptions = p.get('assumption_sources', {})
+        if isinstance(assumptions, str):
+            assumptions = {key: assumptions for key in ('base_date', 'annual_rates', 'fx_rates')}
+        if not isinstance(assumptions, dict):
+            raise ValueError('Varsayım dayanağı açıklama metni veya nesne olmalı.')
+        n = row(ws, [oid, 'Değerleme tarihi', None, '', str(assumptions.get('base_date', data['analysis_date']))])
+        inp(ws, f'C{n}', p['base_date'], ['costs', oid, 'base_date'], 'date'); params[oid, 'base_date'] = f'$C${n}'
+        for curr, value in p['annual_rates'].items():
+            n = row(ws, [oid, 'Yıllık efektif oran', None, curr, str(assumptions.get('annual_rates', 'Merkezi veri varsayımı'))])
+            inp(ws, f'C{n}', value, ['costs', oid, 'annual_rates', curr], 'rate'); ws[f'C{n}'].number_format = '0.00%'
+            params[oid, 'rate', curr] = f'$C${n}'
+        for curr, quote in p.get('fx_rates', {}).items():
+            for field, label in [('forex_selling', 'Döviz satış kuru'), ('unit', 'Kur birimi')]:
+                n = row(ws, [oid, label, None, curr, str(assumptions.get('fx_rates', 'Merkezi veri varsayımı'))])
+                inp(ws, f'C{n}', quote[field], ['costs', oid, 'fx_rates', curr, field], field); params[oid, field, curr] = f'$C${n}'
+    row(ws, []); row(ws, ['Firma', 'Maliyet olayı', 'Basamak', 'Nominal tutar', 'Döviz', 'Ödeme tarihi', 'Yıl', 'Yıllık oran', 'NBD', 'Baz NBD', 'Kaynak', 'Durum'], True)
+    for offer in data['offers']:
+        oid = offer['id']; p = data.get('costs', {}).get(oid)
+        if not p:
+            row(summary, [offer['name'], offer.get('currency'), None, None, None, None, 'Maliyet girdisi yok']); continue
+        result = cost_summary(normalized(p)); groups = {}
+        for index, event in enumerate(p['events']):
+            curr, eid, known = event.get('currency'), event['event_id'], event['known']
+            n = row(ws, [offer['name'], eid, event.get('stage', event.get('classification', '')), None, curr, None, None, None, None, None, None, 'Bilinen' if known else 'Fiyatlanmamış'])
+            if known: inp(ws, f'D{n}', event['amount'], ['costs', oid, 'events', index, 'amount'], 'amount')
+            else: ws[f'D{n}'].fill = PatternFill('solid', fgColor='FFF2CC')
+            if event.get('payment_date'): inp(ws, f'F{n}', event['payment_date'], ['costs', oid, 'events', index, 'payment_date'], 'date')
+            base = params[oid, 'base_date']
+            formula(ws, f'G{n}', f'=IF(COUNT(F{n},{base})=2,(F{n}-{base})/365,"")')
+            if (oid, 'rate', curr) in params:
+                formula(ws, f'H{n}', '=' + params[oid, 'rate', curr]); ws[f'H{n}'].number_format = '0.00%'
+            formula(ws, f'I{n}', f'=IF(COUNT(D{n},G{n},H{n})=3,D{n}/(1+H{n})^G{n},"")', {'kind': 'event_pv', 'offer_id': oid, 'event_id': eid})
+            if (oid, 'forex_selling', curr) in params:
+                formula(ws, f'J{n}', f'=IF(ISNUMBER(I{n}),I{n}*{params[oid,"forex_selling",curr]}/{params[oid,"unit",curr]},"")', {'kind': 'event_base', 'offer_id': oid, 'event_id': eid})
+            evidence(ws, f'K{n}', event)
+            if known: groups.setdefault(curr, []).append(n)
+        if not groups:
+            row(summary, [offer['name'], None, None, None, p.get('base_currency'), None, 'Bilinen maliyet yok; toplam hesaplanamadı'])
+        for curr, rows in groups.items():
+            n = row(summary, [offer['name'], curr, None, None, p.get('base_currency'), None, 'Eksik maliyet var; bilinen ara toplam' if result['unknown_event_ids'] else 'Sayısal maliyet girdileri tamam'])
+            for dest, src, kind in [('C', 'D', 'nominal'), ('D', 'I', 'pv')]:
+                formula(summary, f'{dest}{n}', '=SUM(' + ','.join(f"'Fiyat ve Kapsam'!{src}{r}" for r in rows) + ')', {'kind': kind, 'offer_id': oid, 'currency': curr})
+            if p.get('base_currency'):
+                formula(summary, f'F{n}', '=SUM(' + ','.join(f"'Fiyat ve Kapsam'!J{r}" for r in rows) + ')', {'kind': 'base_currency_total', 'offer_id': oid, 'currency': curr})
+                offer_base_cells.setdefault(oid, []).append(f"'Özet'!F{n}")
+    row(summary, [])
+    row(summary, ['Firma', 'Teklif tarihi', 'Son geçerlilik', 'Yaş (gün)', 'Geçerlilik testi', 'Yaş testi', 'Kaynak'], True)
+    fact_indices = {f['fact_id']: i for i, f in enumerate(data.get('facts', []))}
+    for offer in data['offers']:
+        oid = offer['id']; n = row(summary, [offer['name']])
+        for field, col in [('quote_date', 'B'), ('validity', 'C')]:
+            fid = f'{oid}/field/{field}'; fact = facts.get(fid, {})
+            if fact.get('evidence_status') == 'verified':
+                inp(summary, f'{col}{n}', fact['value'], ['facts', fact_indices[fid], 'value'], 'date')
+        analysis_ref = f'$B${analysis_row}'
+        formula(summary, f'D{n}', f'=IF(ISNUMBER(B{n}),{analysis_ref}-B{n},"")', {'kind': 'quote_age', 'offer_id': oid}); summary[f'D{n}'].number_format = '0'
+        formula(summary, f'E{n}', f'=IF(ISNUMBER(C{n}),IF(C{n}<{analysis_ref},"Geçerlilik dolmuş","Süre içinde"),"Geçerlilik teyidi yok")', {'kind': 'validity', 'offer_id': oid})
+        formula(summary, f'F{n}', f'=IF(ISNUMBER(D{n}),IF(OR(D{n}>60,D{n}<0),"Güncel teklif teyidi","Yaş sınırı içinde"),"Teklif tarihi yok")', {'kind': 'age_status', 'offer_id': oid})
+        evidence(summary, f'G{n}', {'fact_ids': [f'{oid}/field/quote_date', f'{oid}/field/validity']})
+    if data.get('scope_items'):
+        row(ws, []); row(ws, ['Kapsam kimliği', 'Firma/sınıf', 'Konu', 'Tutar', 'Döviz', 'RFI', 'Kaynak'], True)
+        for item in data['scope_items']:
+            n = row(ws, [item.get('id'), str(item.get('offer_id', 'ORTAK')) + ' / ' + str(item.get('classification', '')), item.get('description'), number(item.get('amount')), item.get('currency'), item.get('rfi'), None]); evidence(ws, f'G{n}', item)
+        prose(ws, 'Kapsam tablosu açıklamadır; toplama yalnız yukarıdaki benzersiz maliyet olayları girer.')
+    for oi, offer in enumerate(data['offers']):
+        for li, line in enumerate(offer.get('lines', [])):
+            row(ws, []); prose(ws, f"{offer['name']} — {line.get('description', line.get('id', 'Kalem'))}"); cells = {}
+            for field, default in [('quantity', None), ('unit_price', None), ('price_unit', 1), ('vat_rate', None)]:
+                n = row(ws, [field, None]); inp(ws, f'B{n}', line.get(field, default), ['offers', oi, 'lines', li, field], field); cells[field] = f'B{n}'
+            discounts = []
+            for di, discount in enumerate(line.get('discounts', [])):
+                n = row(ws, ['Ardışık iskonto', None]); inp(ws, f'B{n}', discount, ['offers', oi, 'lines', li, 'discounts', di], 'discount'); discounts.append(f'(1-B{n})')
+            q, pr, u, v = (cells[k] for k in ('quantity', 'unit_price', 'price_unit', 'vat_rate'))
+            n = row(ws, ['KDV hariç net', None, 'KDV', None, 'KDV dahil toplam', None])
+            amount = f'{q}*{pr}/{u}' + ''.join('*' + d for d in discounts)
+            net = f'({amount})/(1+{v})' if line.get('price_includes_vat', False) else amount
+            guard = f'COUNT({q},{pr},{u},{v})=4'
+            for cell, expr, field in [(f'B{n}', net, 'net_excluding_vat'), (f'D{n}', f'B{n}*{v}', 'vat_amount'), (f'F{n}', f'B{n}+D{n}', 'total_including_vat')]:
+                formula(ws, cell, f'=IF({guard},{expr},"")', {'kind': 'line', 'offer_index': oi, 'line_index': li, 'field': field})
+    decision_payload = decision
+    decision = sheets['Karar Özeti']; prose(decision, 'Sonuç ve Öneri')
+    # Keep adjudicator text separate from its hashed source data.
+    adjudication = decision_payload
+    prose(decision, adjudication['summary'] if adjudication is not None else 'Hakemin gerekçeli karar özeti bekleniyor.')
+    contract['decision_cells'] = [{'cell': c.coordinate, 'value': c.value} for rows in decision for c in rows if isinstance(c.value, str)]
+    for issue in (qa or {}).get('open_issues', []): prose(decision, 'Açık konu: ' + issue)
+    if not data.get('requirements'): prose(decision, 'Şartname yok: teknik denklik doğrulanmadı.')
+    if profile == 'hizli': prose(decision, 'Hızlı profil: kör okuma yapılmadı; kritik alanlar hedefli görüntü kontrolü kapsamındadır.')
+
+    def table(name, headers, records, mapper):
+        if name not in sheets: return
+        target = sheets[name]; row(target, headers, True)
+        for item in records:
+            n = row(target, mapper(item))
+            if profile == 'yuksek_guvence':
+                col = next((i+1 for i, h in enumerate(headers) if h in ('Kaynak', 'Kanıt')), None)
+                if col: evidence(target, f'{colname(col)}{n}', item)
+                if name == 'Kaynaklar' and item.get('path'):
+                    p = Path(item['path']).resolve()
+                    if not p.is_file(): raise ValueError('Envanter kaynak dosyası bulunamadı.')
+                    target[f'B{n}'].hyperlink = p.as_uri()
+        if not records: prose(target, 'Kayıt yok; kontrolün durumu merkezi veride değerlendirilir.')
+    table('RFI', ['Kimlik', 'Muhatap', 'Soru', 'İlişkili olgular', 'Durum', 'Kaynak'], data.get('rfi', []), lambda x: [x.get('id'), x.get('owner'), x.get('question'), ', '.join(x.get('fact_ids', [])), x.get('status', 'Yanıt bekleniyor'), citation(x)[0]])
+    table('Elemeli Değerlendirme', ['Firma', 'Karar', 'Gerekçe', 'Kanıt'], data.get('exclusions', []), lambda x: [x.get('offer_id'), x.get('decision'), x.get('reason'), citation(x)[0]])
+    table('Ticari ve Sözleşme', ['Olgu', 'Değer', 'Kanıt durumu', 'Kaynak', 'Alıntı'], [f for f in data.get('facts', []) if '/field/' in f.get('fact_id', '')], lambda x: [x['fact_id'], str(x.get('value')), x.get('evidence_status'), citation(x)[0], x.get('quote')])
+    table('Kaynaklar', ['Kimlik', 'Dosya', 'SHA-256', 'Kanıt durumu'], list(sources.values()), lambda x: [x.get('source_id'), x.get('name') or Path(x.get('path', '')).name, x.get('sha256'), 'Envanter kaydı'])
+    table('Şartname Uygunluğu', ['Madde/Firma', 'Hüküm', 'Durum', 'Kaynak', 'Alıntı'], [f for f in data.get('facts', []) if 'requirement/' in f.get('fact_id', '')], lambda x: [x['fact_id'], str(x.get('value')), x.get('evidence_status'), citation(x)[0], x.get('quote')])
+    table('Yeterlilik ve Risk', ['Firma', 'Konu', 'Risk', 'Kanıt'], data.get('risks', []), lambda x: [x.get('offer_id'), x.get('description'), x.get('severity'), citation(x)[0]])
+    table('Uzman Teyidi', ['Muhatap', 'Konu', 'Gerekçe', 'Durum'], data.get('expert_confirmations', []), lambda x: [x.get('owner'), x.get('question'), x.get('reason'), x.get('status', 'Bekliyor')])
+    table('Değişim Kaydı', ['Firma', 'Değişen kalem', 'Önceki', 'Yeni', 'KTM etkisi', 'Cevapsız RFI'], data.get('change_log', []), lambda x: [str(x.get(k, '')) for k in ('offer_id', 'field', 'before', 'after', 'cost_effect', 'unanswered_rfi')])
+    for key, name in modules.items():
+        records = data.get('modules', {}).get(key, [])
+        table(name, ['Firma', 'Konu', 'Değer', 'Birim', 'Kaynak'], records if isinstance(records, list) else [records], lambda x: [x.get('offer_id'), x.get('description'), x.get('value'), x.get('unit'), citation(x)[0]])
+    if 'Puanlama' in sheets:
+        scoring = bound_scoring(normalized(data), {oid: cost_summary(normalized(p)) for oid, p in data['costs'].items()}); target = sheets['Puanlama']; suppliers = scoring['suppliers']; eligible = [i for i, s in enumerate(suppliers) if s['eligible']]
+        row(target, ['Kriter', 'Ağırlık'] + [s['supplier_id'] for s in suppliers], True); original_rows = []
+        for ci, criterion in enumerate(scoring['criteria']):
+            n = row(target, [criterion['criterion_id']]); original_rows.append(n)
+            inp(target, f'B{n}', criterion['weight'], ['scoring', 'criteria', ci, 'weight'], 'weight')
+            for si, supplier in enumerate(suppliers):
+                binding = criterion['bindings'][supplier['supplier_id']]; cell = f'{colname(si+3)}{n}'
+                if binding['kind'] == 'cost':
+                    formula(target, cell, '=SUM(' + ','.join(offer_base_cells[binding['offer_id']]) + ')', {'kind': 'criterion_value', 'criterion_id': criterion['criterion_id'], 'supplier_id': supplier['supplier_id']})
+                else:
+                    fi = fact_indices[binding['fact_id']]
+                    inp(target, cell, data['facts'][fi]['value'], ['facts', fi, 'value'], 'criterion')
+        row(target, []); row(target, ['Normalleştirilmiş puan', 'Ayırt edici ağırlık'] + [s['supplier_id'] for s in suppliers], True); score_rows = []
+        for ci, criterion in enumerate(scoring['criteria']):
+            orig = original_rows[ci]; n = row(target, [criterion['criterion_id']]); score_rows.append(n)
+            refs = ','.join(f'{colname(i+3)}{orig}' for i in eligible)
+            formula(target, f'B{n}', f'=IF(MAX({refs})<>MIN({refs}),B{orig},0)')
+            for si in eligible:
+                col = colname(si+3); value = f'{col}{orig}'
+                if criterion['direction'] == 'direct': expr = value
+                elif criterion.get('method', 'proportional') == 'proportional': expr = f'10*MIN({refs})/{value}' if criterion['direction'] == 'lower' else f'10*{value}/MAX({refs})'
+                else:
+                    term = f'MAX({refs})-{value}' if criterion['direction'] == 'lower' else f'{value}-MIN({refs})'
+                    expr = f'IF(MAX({refs})=MIN({refs}),10,10*({term})/(MAX({refs})-MIN({refs})))'
+                formula(target, f'{col}{n}', '=' + expr, {'kind': 'criterion_score', 'supplier_id': suppliers[si]['supplier_id'], 'criterion_id': criterion['criterion_id']})
+        n = row(target, ['Toplam puan / ayırt edici ağırlık'])
+        formula(target, f'B{n}', f'=SUM(B{score_rows[0]}:B{score_rows[-1]})', {'kind': 'distinguishing_weight'})
+        for si in eligible:
+            col = colname(si+3)
+            formula(target, f'{col}{n}', f'=SUMPRODUCT(B{original_rows[0]}:B{original_rows[-1]},{col}{score_rows[0]}:{col}{score_rows[-1]})/100', {'kind': 'score', 'supplier_id': suppliers[si]['supplier_id']})
+        rank = row(target, ['Puan sırası'])
+        for si in eligible:
+            col = colname(si+3)
+            formula(target, f'{col}{rank}', f'=1+COUNTIF(C{n}:{colname(len(suppliers)+2)}{n},">"&{col}{n})', {'kind': 'rank', 'supplier_id': suppliers[si]['supplier_id']})
+            target[f'{col}{rank}'].number_format = '0'
+        prose(target, 'Elenen teklifler normalleştirme ve puan dışında. Eşit puan aynı sıra alır. Puan tek başına satınalma önerisi değildir.')
+        scenarios = sensitivity_specs(scoring)
+        if not scenarios:
+            prose(target, 'Tek kriterde ağırlık alternatifi yoktur; fiyat ve kur parametreleri düzenlenebilir.')
+        else:
+            row(target, []); row(target, ['Duyarlılık senaryosu', 'Ayırt edici oran'] + [s['supplier_id'] for s in suppliers], True)
+            baseline_row = row(target, ['Baz'])
+            formula(target, f'B{baseline_row}', f'=B{n}/100'); target[f'B{baseline_row}'].number_format = '0.0%'
+            for si in eligible: formula(target, f'{colname(si+3)}{baseline_row}', f'={colname(si+3)}{n}')
+            for scenario_index, scenario in enumerate(scenarios):
+                row(target, []); row(target, [scenario.get('label', scenario['id']), 'Ağırlık'], True); weight_rows = []
+                for criterion in scoring['criteria']:
+                    r = row(target, [criterion['criterion_id']]); weight_rows.append(r)
+                    inp(target, f'B{r}', scenario['weights'][criterion['criterion_id']], ['scoring', 'sensitivity', scenario_index, 'weights', criterion['criterion_id']], 'sensitivity_weight')
+                total_row = row(target, ['Ağırlık toplamı'])
+                formula(target, f'B{total_row}', f'=SUM(B{weight_rows[0]}:B{weight_rows[-1]})', {'kind': 'sensitivity_weight_total', 'scenario_id': scenario['id']})
+                row(target, ['Senaryo sonucu', 'Ayırt edici oran'] + [s['supplier_id'] for s in suppliers], True)
+                result_row = row(target, [scenario.get('label', scenario['id'])])
+                terms = []
+                for ci, weight_row in enumerate(weight_rows):
+                    refs = ','.join(f'{colname(i+3)}{original_rows[ci]}' for i in eligible)
+                    terms.append(f'IF(MAX({refs})<>MIN({refs}),B{weight_row},0)')
+                formula(target, f'B{result_row}', '=SUM(' + ','.join(terms) + ')/100', {'kind': 'sensitivity_ratio', 'scenario_id': scenario['id']}); target[f'B{result_row}'].number_format = '0.0%'
+                for si in eligible:
+                    col = colname(si+3)
+                    formula(target, f'{col}{result_row}', f'=SUMPRODUCT(B{weight_rows[0]}:B{weight_rows[-1]},{col}{score_rows[0]}:{col}{score_rows[-1]})/100', {'kind': 'sensitivity_score', 'scenario_id': scenario['id'], 'supplier_id': suppliers[si]['supplier_id']})
+                rank_row = row(target, ['Senaryo sırası'])
+                for si in eligible:
+                    col = colname(si+3)
+                    formula(target, f'{col}{rank_row}', f'=1+COUNTIF(C{result_row}:{colname(len(suppliers)+2)}{result_row},">"&{col}{result_row})', {'kind': 'sensitivity_rank', 'scenario_id': scenario['id'], 'supplier_id': suppliers[si]['supplier_id']}); target[f'{col}{rank_row}'].number_format = '0'
+            prose(target, 'Ayırt edici oran %60 altında olduğunda aynı sıra, kararın sağlamlığını tek başına göstermez. Ağırlık tercihi karar merciine aittir.')
+    for target in wb:
+        target.sheet_view.showGridLines = False; target.sheet_properties.pageSetUpPr.fitToPage = True
+        target.page_setup.orientation = 'landscape'; target.page_setup.paperSize = target.PAPERSIZE_A3
+        target.page_setup.fitToWidth = 1; target.page_setup.fitToHeight = 0
+        target.oddFooter.center.text = f'teklif-degerlendirme {version} | &P / &N'
+        target.freeze_panes = 'A5'
+        for col in range(1, target.max_column+1): target.column_dimensions[colname(col)].width = 22
+        for col in ('A', 'B'): target.column_dimensions[col].width = 28
+        if target.title in ('RFI', 'Ticari ve Sözleşme', 'Şartname Uygunluğu'):
+            target.column_dimensions['C'].width = 48; target.column_dimensions['E'].width = 54
+        if target.title == 'Fiyat ve Kapsam':
+            target.column_dimensions['K'].width = 45
+            for col in ('D', 'F', 'G', 'H', 'I', 'J'): target.column_dimensions[col].width = 17
+        for cells in target.iter_rows():
+            height = target.row_dimensions[cells[0].row].height or 25
+            for c in cells:
+                if isinstance(c.value, (int, float)) or c.data_type == 'f':
+                    c.alignment = Alignment(horizontal='right', vertical='top', indent=1)
+                if c.data_type == 'f' or not isinstance(c.value, str) or any(c.coordinate in a for a in target.merged_cells.ranges): continue
+                width = target.column_dimensions[c.column_letter].width or 22
+                count = sum(max(1, math.ceil(len(s)/max(width-2, 8))) for s in c.value.splitlines())
+                height = max(height, 14*count+8); c.alignment = Alignment(vertical='top', wrap_text=True)
+            target.row_dimensions[cells[0].row].height = min(409, height)
+        target.print_area = target.dimensions
     wb.calculation = CalcProperties(calcId=191029, fullCalcOnLoad=True, forceFullCalc=True)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(output)
-    return {"status": "DRAFT_RECALC_REQUIRED", "output": str(output), "sheets": len(wb.worksheets)}
+    output.parent.mkdir(parents=True, exist_ok=True); wb.save(output); wb.close()
+    contract['workbook_sha256'] = file_hash(output)
+    cp.write_text(json.dumps(contract, ensure_ascii=False, indent=2), encoding='utf-8')
+    return {'status': 'DRAFT_RECALC_REQUIRED', 'output': str(output), 'contract': str(cp), 'sheets': tabs, 'data_sha256': digest(data), 'contract_sha256': file_hash(cp)}
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data", type=Path, required=True); parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-    print(json.dumps(build(json.loads(args.data.read_text(encoding="utf-8")), args.output), ensure_ascii=False))
+if __name__ == '__main__':
+    p = argparse.ArgumentParser(description=__doc__); p.add_argument('--data', type=Path, required=True); p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--profile', choices=sorted(PROFILES), default='standart'); p.add_argument('--inventory', type=Path); p.add_argument('--qa', type=Path); p.add_argument('--decision', type=Path)
+    a = p.parse_args(); read = lambda f: json.loads(f.read_text(encoding='utf-8')) if f else None
+    print(json.dumps(build(read(a.data), a.output, a.profile, read(a.inventory), read(a.qa), read(a.decision)), ensure_ascii=False))

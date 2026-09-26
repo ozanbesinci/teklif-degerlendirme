@@ -3,6 +3,7 @@ from pathlib import Path, PurePosixPath
 import posixpath
 import xml.etree.ElementTree as ET
 import zipfile
+from decimal import Decimal, InvalidOperation
 
 MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -56,8 +57,18 @@ def validate_xlsx(path):
                     if cell.find(f"{{{MAIN_NS}}}f") is not None:
                         formula_count += 1
                         v = cell.find(f"{{{MAIN_NS}}}v")
-                        if v is None or v.text is None or not v.text.strip():
-                            raise ValueError("Formül önbelleği boş; yeniden hesaplama doğrulanmalı.")
+                        if v is None:
+                            raise ValueError("Formül önbelleği yok; yeniden hesaplama gerekli.")
+                        if cell.get("t") == "str":
+                            continue  # Excel's legitimate IF(..., "") result; real COM receipt still required.
+                        if v.text is None or not v.text.strip():
+                            raise ValueError("Sayısal formül önbelleği boş.")
+                        try:
+                            numeric = Decimal(v.text)
+                            if not numeric.is_finite():
+                                raise ValueError("Formül önbelleği sonlu değil.")
+                        except InvalidOperation as exc:
+                            raise ValueError("Sayısal formül önbelleği sayı değil.") from exc
             if formula_count == 0:
                 raise ValueError("Karar kitabında hesap formülü yok.")
             return {"sheets": len(sheets), "formulas": formula_count, "scope": "structure_and_cache_only"}

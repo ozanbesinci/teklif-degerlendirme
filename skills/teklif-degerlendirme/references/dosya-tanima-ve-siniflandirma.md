@@ -2,7 +2,9 @@
 
 Kullanıcının dosya türünü ayrıca belirtmesi gerekmez. **Dosyaların işlevi ve ilgili
 alım türü içeriklerinden belirlenir.** Bu referans, dosya tanıma ve sınıflandırma
-yöntemini tanımlar.
+yöntemini tanımlar. Otomatik çıkarıcı PDF/XLSX/DOCX/EML/metin için ilk geçiş sağlar;
+diğer biçimler desteklenmiş gibi sayılmaz. Uygun araç yoksa okunamadı ve RFI kaydı
+açılır. Yeni kütüphane kurulumu burada yapılmaz; ortam program-guncelle ile yönetilir.
 
 Sıra: **(1) biçime göre oku → (2) her dosyayı rolüne göre sınıflandır → (3) alım dalını
 tespit et → (4) envanter tablosunu kullanıcıya göster.**
@@ -12,15 +14,15 @@ tespit et → (4) envanter tablosunu kullanıcıya göster.**
 | Biçim | Yol | Notlar |
 |---|---|---|
 | PDF (metin katmanlı) | `pdfplumber` ile metin + tablo | Her PDF ayrı `.txt`'ye yazılır; ana bağlam şişmesin |
-| PDF (taranmış / metin yok) | sayfayı görsele çevir (`pymupdf`) → **görsel olarak oku** | Kod yoksa PDF'i doğrudan görsel olarak incele; OCR kütüphanesi varsa (`pytesseract`) destek olarak kullan |
+| PDF (taranmış / metin yok) | sayfayı görsele çevir (`pypdfium2`) → **görsel olarak oku** | Özgün sayfayı görsel olarak incele; otomatik metin yoksa bunu kaydet |
 | XLSX / XLSM | `openpyxl` (`data_only=True` ile değerler, `False` ile formüller) | Gizli sayfa ve gizli satır/sütun kontrolü şart — iskonto ve alternatif fiyat orada saklı olabilir |
-| XLS (eski) | `pandas.read_excel` (xlrd) veya XLSX'e çevir | Açılmıyorsa kullanıcıdan XLSX ister |
+| XLS (eski) | Mevcut Excel ile salt okunur aç; gerekiyorsa çalışma kopyasını XLSX'e çevir | Açılmıyorsa kullanıcıdan XLSX ister |
 | CSV | ayırıcıyı tespit et (`;` Türkçe Excel'de yaygın), `utf-8-sig` dene | Bozuk Türkçe karakter → kodlama denemesi: utf-8, cp1254, iso-8859-9 |
 | DOCX | OOXML (`word/document.xml`) tercih edilir | `python-docx` **kabul edilmemiş değişiklik izlemeyi (redline) sessizce düşürür**; teklif/şartname redline içeriyorsa OOXML'den oku |
 | DOC (eski) | metin çıkarımı denenir; olmazsa kullanıcıdan DOCX/PDF ister | |
 | JPEG / PNG / HEIC / WEBP | **doğrudan görsel olarak oku** (asıl yol) | Telefonla çekilmiş teklif, el yazısı fiyat, imzalı teklif mektubu, kaşe, teknik çizim. Okunan her değer "görselden okundu" kaynağıyla işaretlenir |
-| MSG / EML | gövde + ekler ayrıştırılır | Fiyat çoğu zaman mailin gövdesindedir, ekte değil. Ek varsa ek ayrıca sınıflandırılır |
-| ZIP / RAR | açılır, içindekiler yeniden sınıflandırılır | Ara dosyalar geçici çalışma alanına açılır |
+| MSG / EML | gövde ve ekler uygun yerel araçla ayrı okunur | Fiyat çoğu zaman mailin gövdesindedir, ekte değil. Ek varsa ek ayrıca sınıflandırılır |
+| ZIP / RAR | açılır, içindekiler yeniden sınıflandırılır | Yol kaçışı/bağlantı içermeyen üyeler kontrollü çalışma alanına açılır; özgün arşiv hash'i korunur |
 | DWG / DXF / IFC | **okunmaz** | Kullanıcıya bildirilir: "çizim dosyası okunamadı, PDF çıktısı gerekiyor". Sessizce yok sayma |
 
 **Görselden okumanın kuralı:** görselden okunan hiçbir sayı doğrulanmadan toplama girmez.
@@ -35,7 +37,7 @@ fiyat tablosu mu, logo mu.
 
 ## 2. Rol sınıflandırması
 
-Her dosya şu rollerden **birine** atanır. Karar dosya adına değil, **ilk sayfanın
+Her dosya şu rollerden uygun olanlarına atanır. Karar dosya adına değil, **ilk sayfanın
 içeriğine** dayanır — dosya adları güvenilmezdir.
 
 | Rol | Sinyaller |

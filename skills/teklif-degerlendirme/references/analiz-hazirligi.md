@@ -50,8 +50,8 @@ Ayrıntı: `ithalat-maliyet-koprusu.md` §2b ve `hesaplama-kontrolleri.md`.
 
 **Analize başlamadan** belirsizlikler toplanır. Kural üçtür:
 
-1. **Belirsizlikler netleştirilir; dayanaksız veri üretilmez.** Anlaşılmayan bir dosya, çelişkili bir bilgi, eksik
-   bir parametre varsa analiz başlamaz.
+1. **Belirsizlikler netleştirilir; dayanaksız veri üretilmez.** Kritik belirsizlik
+   ilgili kararı engeller; bağımsız envanter, çıkarım ve açık konulu ön analiz sürdürülebilir.
 2. **Soruları tek seferde, numaralı ve kısa sor.** Kullanıcıyı adım adım yormak yerine
    bir blok hâlinde: "Başlamadan 4 şeyi netleştirmem gerekiyor: 1) … 2) …"
 3. **Cevap gelmeyen soruyu varsayımla geçebilirsin ama sessizce geçemezsin** — varsayımı
@@ -76,10 +76,12 @@ gerçekten belirsiz olanlar):
   ve kullanılabilir finansman limiti. Şirketin toplam banka bakiyesi gerekmez.
 - **Kalite/stok gerekiyorsa:** hata/iade geçmişi, yeniden işleme ve ikame koşulları;
   tüketim takvimi, başlangıç stok, raf ömrü, MOQ ve sipariş/teslim/depo giderleri.
-- **Çıktı:** yalnız Excel mi, yazılı rapor da mı; rapor firma dışına gidecek mi (maskeleme).
+- **Çıktı:** hızlı/standartta yazılı rapor da isteniyor mu; rapor firma dışına gidecek mi (maskeleme).
+  Yüksek güvencede PDF zorunludur; ayrıca tercih sorulmaz.
   Rapor isteniyorsa PDF üretilir; doğrulandıktan sonra ara `.md` silinir — PDF için ayrıca sorulmaz.
 
-**Dosyalar ve amaç açıksa soru sorma, doğrudan başla.** Gereksiz soru da kullanıcıyı
+**Dosyalar ve amaç açıksa ek iş sorusu sorma. Kullanıcı profil seçmediyse envanterle
+birlikte hızlı/standart/yüksek güvence seçimini al.** Gereksiz soru da kullanıcıyı
 yorar; ölçü şu: *cevabı bilmeden verilecek karar yanlış olabiliyorsa sor.*
 
 ### Adım 0b — Alım dalı ve teklif tipi kapısı

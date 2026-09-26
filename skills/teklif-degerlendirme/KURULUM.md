@@ -1,18 +1,22 @@
-# Kurulum ve Dağıtım — ana skill v3.1.1 / güncelleyici v1.0.0
+# Kurulum ve dağıtım — ana skill v4.0.0 / güncelleyici v1.1.0
 
-## Paket ve kaynak
+Bu kaynak **yerel canlı test adayıdır**. Dosyadaki sürüm numarası GitHub'da
+yayımlandığı veya canlı kabul testinin geçtiği anlamına gelmez.
+Resmî dağıtım deposu:
+[ozanbesinci/teklif-degerlendirme](https://github.com/ozanbesinci/teklif-degerlendirme).
 
-Resmî dağıtım adresi: [ozanbesinci/teklif-degerlendirme](https://github.com/ozanbesinci/teklif-degerlendirme).
-Kaynak adresinin yazılı olması çevrimiçi yayının tamamlandığını göstermez. İlk kurulum
-öncesi yayımlanmış kararlı Release ve sürüm dosyaları doğrulanır.
+## Paket
 
-İki skill **birlikte** kurulur ve güncellenir:
+İki skill birlikte kurulur; `VERSION` dosyaları bağımsızdır:
+ana skill 4.0.0, güncelleyici 1.1.0. Paket manifesti şema 2'dir;
+`skill_versions` iki sürümü, `version` paket etiketini taşır.
 
 ```text
 skills/
   teklif-degerlendirme/
     SKILL.md
     VERSION
+    requirements.txt
     config/
     references/
     scripts/
@@ -22,116 +26,107 @@ skills/
     scripts/
 ```
 
-VERSION dosyaları bağımsızdır: ana skill 3.1.1, güncelleyici 1.0.0. Şema 2 paket
-manifesti `skill_versions` içinde ikisini ayrı taşır; `version` paket etiketidir.
-Yalnız güncelleyici değiştiğinde `paket_olustur.py --release-version` ile paket
-etiketi artırılır; ana skill zorla artırılmaz. Kullanıcıya görünen güncelleme skill'i
-“Teklif Değerlendirme Güncelle”, teknik adı `teklif-degerlendirme-guncelle`dir.
-Güncelleme için GitHub hesabı gerekmez; public Release okuması yeterlidir. Yayınlamak
-için depo yazma yetkisi gerekir. Kimlik bilgisi skill'e veya dağıtım ZIP'ine konmaz.
+Paketin çalışma modülleri ve requirements.txt eksik/boşsa v4 kurulumu reddedilir;
+`ajan_yonetimi.py` girişine ek olarak `ajan_v4.py` ve `kayit_temeli.py` de
+zorunlu modül listesine dahildir.
+Yalnız metadata/sürüm dosyası içeren bir arşiv çalışan eski ağacın yerine geçemez.
+Kaynak depo ZIP'i, doğrulanmış dağıtım ZIP'iyle aynı kurulum biçimi sayılmaz.
 
-## Çalışma gereksinimleri
+## Gereksinimler
 
-- Python 3.11 veya üzeri: hesap, kaynak/kontrol ve güncelleme araçları.
-- Tam ajan profili için model/efor seçimini destekleyen Codex ve erişilebilir
-  `gpt-5.6-sol`, `gpt-5.6-terra`; kritik inceleme gerekirse `gpt-6-astra`.
-- Ana ajan Sol/high; alt ajanlar rol politikasıyla, **Luna hiçbir aşamada yok**.
-- Excel üretimi/okuma için mevcut ortamın kütüphanesi; formül testi için gerçek
-  hesap motoru; PDF için mevcut dönüştürücü ve görsel inceleme aracı.
-- Paket içi PDF içerik kontrolünde `pypdf` gerekir; yoksa kontrol açıkça bloke olur.
-  Kurulum eksikliği gerçek PDF başarı testi yerine geçmez.
-- Model erişimi, çıktı araçları ve ağ yetkisi çalıştırma öncesinde kontrol edilir.
-  Eksik ortam “tam doğrulanmış v3 çalışması” olarak sunulmaz.
+- Windows, yerel Codex masaüstü / ChatGPT Work, model/efor seçebilen yerleşik alt ajanlar.
+- Çalıştırılarak doğrulanmış Python **3.14**; Store kısayolu yeterli değildir.
+- `requirements.txt` içindeki tam sürümler: openpyxl, pypdf, pdfplumber,
+  pypdfium2 ve pywin32. Sürüm kaynağı `program-guncelle` paket listesidir.
+- Masaüstü Microsoft Excel; Python + pywin32 ile görünmez bağımsız örnekte gerçek
+  yeniden hesaplama ve temiz kapanış.
+- Gerçek güncel araç kataloğunda erişilebilir Sol ve Terra aileleri, rollerin medium/high
+  eforları. Her yeni analiz erişilebilir en yeni aile sürümünü çözer. Luna yoktur.
+- Gerçek oturum JSONL kayıtlarına, model/efora ve token sayaçlarına erişim.
 
-## İlk kurulum
+Python/kütüphane eksikliği `program-guncelle` işidir. Python kurucusu veya wheel
+dosyaları teklif paketine gömülmez; bu skill ikinci pip/winget kurulum yolu açmaz.
+Katalog, efor, Excel veya telemetri yoksa “tam doğrulanmış v4” denmez.
 
-Yalnız resmî kararlı Release paketini indir; otomatik üretilen GitHub “Source code”
-ZIP'i ile dağıtım paketini karıştırma. Sürüm, paket dosyaları ve SHA-256 manifestini
-güncelleme aracına doğrulat. Hash, indirme bütünlüğünü denetler; tek başına bağımsız
-yayıncı imzası değildir. Güven kökü doğrulanmış resmî HTTPS deposudur.
+## İlk kurulum ve güncelleme
 
-Kurulum ve güncelleme komutlarının tek güncel kaynağı:
-`../teklif-degerlendirme-guncelle/SKILL.md`. Araçların `--help` çıktısı da paketle
-birlikte gelir. Skill-installer ile kaynak depodan kurarken **iki skill yolunu da**
-seç; tek klasör kurulumu güncelleme sözleşmesini karşılamaz. Ham kaynak kurulumunu
-yönetilen kurulum saymadan önce paket manifestiyle kayıt/bütünlük doğrulaması gerekir.
+Komutların güncel kaynağı `../teklif-degerlendirme-guncelle/SKILL.md` ve
+`scripts/guncelle.py --help` çıktısıdır.
 
-Kullanıcının seçtiği ortak skill köküne kur. Birden çok istemci aynı fiziksel kaynağı
-kullanıyorsa kopya oluşturma; keşif klasörleri bu kaynağa bağlantı/junction olmalıdır.
-Mevcut bir klasör veya farklı hedefli bağlantı üzerine yazma. Bu makinedeki ortak
-kaynak düzeni korunur; genel kurulum için sabit kişisel disk yolu dayatılmaz.
+```text
+python "<guncelle.py>" check --root "<fiziksel-skills>"
+python "<guncelle.py>" install --root "<fiziksel-skills>" --archive "<paket.zip>" --sha256 "<64-karakter-hash>"
+python "<guncelle.py>" verify --root "<fiziksel-skills>"
+```
 
-Yerel Codex keşif dizini mevcut kurulum tercihine göre `~/.codex/skills` veya
-`~/.agents/skills` olabilir. Yeni skill sonraki turda kullanılabilir; görünmüyorsa
-istemcinin beceri listesini yeniden yükle. Global model/ajan ayarlarını değiştirme.
-Bu paketin rol politikası yalnız teklif değerlendirme çalışmasına aittir.
+“Sürümü kontrol et” yalnız okuma; “kur/güncelle” iki yönetilen skill ağacını yenileme
+yetkisidir. Normal çevrimiçi güncelleme resmî kararlı Release'i kullanır. Geliştirme
+yetkisiyle doğrulanmış yerel aday aynı install yolundan kurulabilir; henüz
+yayımlanmamış sürümü GitHub'dan indirmeye çalışma.
 
-## Kullanım ve model seçimi
+Paket doğrulanmadan mevcut kurulum değiştirilmez. İki ağaç dosyalar üst üste
+eklenmeden tamamen değiştirilir; işlem hatasında önceki ağaçlar geri konur.
+Windows geçici kilitleri sınırlı yeniden denemeye tabidir; kalıcı hata gizlenmez.
+İki ağaç tek atomik dosya değildir; işlem günlüğü, kurtarma ve kilit kontrolleri atlanmaz.
 
-1. Ana görevi Sol / yüksek efor ile başlat.
-2. `$teklif-degerlendirme` ile tekliflerin bulunduğu klasörü/dosyaları belirt.
-3. Kaynak envanteri, gerekirse sorular, hesap ve bağımsız kontrol sonrası çıktıyı al.
-4. Alt ajan model/efor seçimi yerleşik araçla açık parametreler üzerinden veya
-   `scripts/ajan_yonetimi.py` ile yapılır. Dry-run model çağrısı değildir.
-5. Hazırlanmış analiz manifestteki değişmez `runner`/snapshot ile sürer. Yeni
-   kurulum bunu değiştirmez; güncelleme sırasında yeni snapshot alınmaz. Eski
-   v3.0.1 global analiz kilidi varsa güncelleme durur; kilidi körlemesine silme.
+Yönetimsiz/değiştirilmiş eski kurulum otomatik silinmez. `register` yalnız paketle
+birebir eşleşen kaynak kurulumunu yönetilen envantere alır. Açık geliştirme kapsamındaki
+aynı sürüm adayını yenilemek için `install --replace-local` mevcut kurallarıyla
+kullanılabilir; normal update buna başvurmaz. Yayımlanmış sürüm içeriği değiştirilmez.
 
-`references/ajan-calistirma.md` çalıştırıcı ve teslim kontrolü şemasını açıklar.
-Sadece SKILL.md'ye “Sol kullan” yazmak aktif oturumun modelini değiştirmez.
-Canlı model koşusu yapılmadıysa model davranışı doğrulanmış denmez.
+Ortak fiziksel skill kökü ve mevcut junction düzeni korunur. Başka skill'ler, global
+model/ajan ayarları ve kullanıcı dosyaları değiştirilmez. Yeni skill sonraki turda
+keşfedilir; kullanıcıya görünmesi başarılı analiz koşusunun kanıtı değildir.
 
-## Güncelleme
+## Analizi başlatma
 
-“Teklif değerlendirmeyi güncelle” isteği iki skill'in birlikte güncellenmesini
-yetkilendirir. “Sürümü kontrol et” yalnız okuma yapar. Güncelleyici daha yeni kararlı
-sürümü doğrular; analiz/güncelleme kilidi, dosya değişikliği veya sürüm uyuşmazlığında
-durur. Yerel değişiklikleri silmez, başka model seçmez, uzaktaki script'i çalıştırmaz.
+1. Personel ana sohbet için güncel Sol veya Terra ailesini seçer; efor tercihi kendisinindir.
+2. `$teklif-degerlendirme` ile kaynak dosyaları/klasörü verir.
+3. Skill envanter ve öneriyi gösterir; personel hızlı, standart veya yüksek güvence seçer.
+4. Gerçek katalog ve ana oturum sayacıyla `prepare` değişmez koşu kopyasını oluşturur.
+5. Sonraki işlemler manifestin `runner` yoluyla yürür. `task` yalnız görev kaydıdır;
+   model yerleşik alt ajan aracıyla açık model/efor kullanılarak çağrılır.
+6. Gerçek model/efor makbuzları, kod QA, bağımsız kaynak okuma, hakem, karar özeti
+   ve Excel kontrolü tamamlandığında `verify` / `close` çalışır.
 
-Paket doğrulanmadan mevcut kurulum değiştirilmez. Güncelleme dosyaları üst üste
-eklemez; iki eski skill ağacını tamamen yenileriyle değiştirir. Başarıda geçici
-eski ağaçlar silinir; artık script veya eski sürüm klasörü kalmaz. Başarısız işlem eski sürümün
-korunmasını/geri alınmasını hedefler; güç kesintisi ve süreç çökmesinden sonra
-kurulum durumu ayrıca doğrulanır. İki klasörün değiştirilmesi tek bir atomik dosya
-işlemi değildir; kurtarma ve kilit kontrollerini atlama. Yeni sürüm sonraki analizde
-kullanılır. Downgrade ve ön sürüm otomatik uygulanmaz.
+Komut yaşam döngüsü: `references/ajan-calistirma.md`.
+Model talimatını yazmak aktif sohbet modelini değiştirmez. CLI model yürütme veya
+oturum devamıyla düzeltme kullanılmaz. Tam sohbet her alt ajana aktarılmaz.
 
-v2 gibi manifesti olmayan eski kurulum üzerine otomatik yazılmaz. Önce kaynak
-değişikliklerini koruyarak eşleşen v3 paketiyle kontrollü kurulum/kayıt gerekir;
-güncelleyici “temiz kurulum” varsayımıyla dosya silmez.
+Hazırlanmış analiz sabit kopyasından yürür; sonraki ortak kurulum değişikliği bu
+kopyayı değiştirmez. Güncelleme kilidinde yeni snapshot alınmaz. Eski global analiz
+kilidi veya yarım işlem kilidi otomatik silinmez. Kaynak değişirse yeni revizyon koşusu gerekir.
 
-## Web ve diğer istemciler
+## Yerel kontrol ve canlı kabul
 
-Satınalma yöntemi ve belgeler farklı istemcilerde okunabilir; Sol/Terra/Astra
-seçimi, bağımsız ajan, kod ve yerel güncelleme yeteneği var kabul edilmez.
-Yalnız yüklenmiş dosyalara erişen ortamda GitHub'dan yerel kurulumu değiştirme
-vaadi verilmez; paket kullanıcı/yönetici tarafından yenilenir. Model kontrolü
-olmayan ortamda v3'ün tam çalışma profili kullanılıyor denmez.
+- Her bileşenin VERSION, SKILL metadata ve CHANGELOG'u eşleşmelidir.
+- Hesap örnekleri, merkezi veri, model çözümü, oturum kanıtı, bütçe, Excel ve
+  güncelleme testleri çalıştırılır. Sadece başlık/metin eşleşmesi yeterli değildir.
+- Gerçek Excel yeniden hesaplama, bağımsız motor mutabakatı ve parametreyi geri alma
+  testi, formül XML'ine cache yazmaktan farklıdır; fiilen çalıştırılmalıdır.
+- Gerçek kullanıcı verili canlı kabul ayrı kayıttır. Hızlı: 8M/25 dk; standart:
+  25M/60 dk; yüksek güvence: 50M/120 dk. Bunlar tavan, süre tahmini değildir.
+- Kabulte kaynak bulguları, açık konular, doğru son birikimli sayaçlar ve süre kaydedilir.
+  Sentetik birim testleri gerçek model davranışı veya tasarruf oranı kanıtlamaz.
+- Kullanıcı bu aday için canlı veriyi verecektir. Kabul tamamlanmadan personele
+  yaygınlaştırılmaz; GitHub yayını ayrıca yetki ister.
 
-## Sürüm hazırlama ve doğrulama
+## Paket hazırlama ve yayın
 
-- Her skill'in VERSION, kendi metadata ve CHANGELOG'u birbirini tutmalı;
-  iki skill'in sürümünün eşit olması gerekmez.
-- Mevcut 37 hesap örneği, yeni hesap/kontrol/güncelleme birim testleri çalışmalı.
-- Kurulum, daha yeni sürüm, bozuk paket, yerel değişiklik, aktif analiz, geri alma
-  ve zorunlu kontrol eksikliği test edilmeli.
-- Gerçek model ve gerçek teklif seti koşusu birim testinden ayrı raporlanmalı;
-  sahte başarı kayıtları veya yalnız başlık eşleşmesi yeterli değildir.
-- `scripts/paket_olustur.py` yalnız iki skill'in izinli dosyalarını alır. Çıktı
-  dizini skill ağacının dışında olmalıdır. Kurumsal belgeler, analizler, anahtarlar,
-  sohbet/hafıza dosyaları ve testteki gerçek şirket verileri dağıtıma girmez.
-- GitHub'a yalnız bu bağımsız paket/kaynak yapısı yayımlanır; vault'un tamamı
-  gönderilmez. Release etiketi ile paket `version` alanı aynı olmalı.
-- Yerel geliştirme/kurulumdan sonra push, tag, Release ve yükleme için kullanıcıdan
-  ayrıca onay alınır; kullanıcı model değiştirecekse burada durulur.
-- Kimlik doğrulaması veya yayın tamamlanmadıysa yerel güncelleme ile çevrimiçi yayın
-  ayrı durum olarak raporlanır. Yeni sürüm yayımlamak kullanıcı analizini çalıştırmaz.
+`scripts/paket_olustur.py` yalnız iki skill'in izinli kaynak dosyalarını alır.
+Çıktı skill ağacının dışında olmalıdır. requirements.txt pakete girer; şirket
+teklifleri, fiyatlar, raporlar, sohbet/oturum/hafıza, kimlik bilgileri ve gerçek test
+verileri girmez. Paket hash'i bütünlüğü doğrular; bağımsız yayıncı imzası değildir.
 
-**Bir kerelik geçiş:** eski 3.0.1 güncelleyici şema 2'yi okuyamaz. İlk geçişte yeni
-1.0.0 güncelleyicinin doğrulanmış kaynak kopyasıyla `install` çalıştırılır veya iki
-skill onaylı kaynak kurulum aracıyla yenilenip paketle `register` edilir. Eski
-script'in yeni şemayı desteklediği söylenmez. Yerel adayın yeni güncelleyicisi
-bu geçişi yapar; sonraki `update` normal çalışır.
+Yalnız güncelleyici değişirse `--release-version` ile paket etiketi ilerletilebilir;
+ana skill zorla artırılmaz. Release etiketi ve paket version alanı aynı olmalıdır.
+Yerel kurulum, commit/push/tag/Release/yükleme yetkisi değildir. Kullanıcı yayın
+talep etmeden yayın yapılmaz; yerel durum ile yayımlanmış durum ayrı raporlanır.
 
-Önceki sürüm ayrıntıları `CHANGELOG.md` içindedir. Birim testi üretim ortamında
-“sıfır hata”, maliyet azalması veya bütün platformlarda eşdeğer davranış garantisi değildir.
+Eski ortak 3.0.1 güncelleyici şema 2'yi okuyamaz. Böyle bir kurulumdan ilk geçiş
+yeni güncelleyicinin doğrulanmış kaynak kopyasıyla yapılır; eski script'in yeni
+şemayı desteklediği varsayılmaz.
+
+v4 bu ortam için tasarlanır; Claude Teams ve diğer web istemcileri doğrulanmış
+çalışma kapsamı dışındadır. İş kılavuzlarını okuyabilmeleri aynı model/araç/Excel
+doğrulama yeteneğine sahip olduklarını göstermez.

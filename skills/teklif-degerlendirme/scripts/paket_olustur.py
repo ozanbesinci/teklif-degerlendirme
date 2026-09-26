@@ -11,7 +11,7 @@ import sys
 import zipfile
 
 SKILLS = ("teklif-degerlendirme", "teklif-degerlendirme-guncelle")
-TOP = {"SKILL.md", "VERSION", "CHANGELOG.md", "KURULUM.md"}
+TOP = {"SKILL.md", "VERSION", "CHANGELOG.md", "KURULUM.md", "requirements.txt"}
 DIRECTORIES = {"references", "scripts", "config", "agents"}
 EXTENSIONS = {".md", ".py", ".json", ".yaml", ".toml"}
 
