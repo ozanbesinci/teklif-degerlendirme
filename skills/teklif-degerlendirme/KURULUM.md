@@ -1,7 +1,8 @@
 # Kurulum ve dağıtım — ana skill v4.0.2 / birleşik güncelleyici
 
-Bu kaynak **yerel canlı test adayıdır**. Dosyadaki sürüm numarası GitHub'da
-yayımlandığı veya canlı kabul testinin geçtiği anlamına gelmez.
+**4.0.2 kararlı dağıtım sürümüdür.** Yayın, kullanıcının açık kararıyla yapılmıştır.
+Excel/PDF doğrulaması ile uçtan uca canlı analiz kabulü ayrı kayıtlardır;
+kararlı yayın, bütün canlı analiz senaryolarının kabul edildiği anlamına gelmez.
 Resmî dağıtım deposu:
 [ozanbesinci/teklif-degerlendirme](https://github.com/ozanbesinci/teklif-degerlendirme).
 
@@ -109,8 +110,8 @@ kilidi veya yarım işlem kilidi otomatik silinmez. Kaynak değişirse yeni revi
   25M/60 dk; yüksek güvence: 50M/120 dk. Bunlar tavan, süre tahmini değildir.
 - Kabulte kaynak bulguları, açık konular, doğru son birikimli sayaçlar ve süre kaydedilir.
   Sentetik birim testleri gerçek model davranışı veya tasarruf oranı kanıtlamaz.
-- Kullanıcı bu aday için canlı veriyi verecektir. Kabul tamamlanmadan personele
-  yaygınlaştırılmaz; GitHub yayını ayrıca yetki ister.
+- 4.0.2 kullanıcının açık kararıyla kararlı sürüm olarak yayımlanır. Uçtan uca
+  canlı analiz kabulünün durumu ayrıca izlenir; yapılmamış kontrol geçti sayılmaz.
 
 ## Paket hazırlama ve yayın
 

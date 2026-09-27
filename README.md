@@ -2,10 +2,11 @@
 
 Satınalma tekliflerini kapsam, maliyet, ticari koşul ve risk açısından karşılaştırır.
 
-## v4.0.2 aday kaynakları
+## Kararlı sürüm: v4.0.2
 
-Bu dal ana skill **4.0.2** kaynaklarını içerir. Canlı kabul henüz tamamlanmadı;
-bu dal kararlı Release değildir. Son kararlı Release **v3.1.1** olarak kalır.
+Ana skill **4.0.2**, kullanıcının açık kararıyla kararlı dağıtıma alınmıştır.
+[ZIP ve SHA-256 doğrulama dosyası](https://github.com/ozanbesinci/teklif-degerlendirme/releases/tag/v4.0.2)
+GitHub Release üzerinden dağıtılır. Uçtan uca canlı analiz kabulü ayrıca izlenir.
 
 ### Son değişiklikler
 
@@ -26,7 +27,7 @@ ayrıca kurulmaz.
 
 Paket manifesti şema 3'tür ve yalnız ana skill'in izinli kaynaklarını kapsar.
 Kaynak depo ZIP'i doğrulanmış kurulum paketi yerine kullanılamaz.
-Güncelleyici normal kullanımda kararlı Release'i denetler; aday dalı otomatik kurmaz.
+Birleşik güncelleyici normal kullanımda en son kararlı Release paketini denetler.
 
 ## Doğrulama
 

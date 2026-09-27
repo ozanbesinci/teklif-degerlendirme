@@ -1,7 +1,7 @@
 {
   "files": {
-    "skills/teklif-degerlendirme/CHANGELOG.md": "6787ea6ee01fac24321b7fa03aa6b47937aa46e18329190cb4e3c5fce2fa2379",
-    "skills/teklif-degerlendirme/KURULUM.md": "74833e2a11d6acdd20e8ffdee459541e36802a908e1efc1966a49f0619ab9e01",
+    "skills/teklif-degerlendirme/CHANGELOG.md": "e6df8f52f39079a36abeff00bd75e5b0a592fe351977bfb056dcecdc3ed8a91e",
+    "skills/teklif-degerlendirme/KURULUM.md": "a55629a27e326b6ab28fb40cabeabe08bf8e233d2518de0987ee76ca99af51d1",
     "skills/teklif-degerlendirme/SKILL.md": "f34fda3329a231979045866064a2e5e479cfc51fa7e56713eafa5476d1a3647f",
     "skills/teklif-degerlendirme/VERSION": "c6d3fb057b198f1d0563d4218d4e36b48df752251aabffe78ea60aac5a72c7a2",
     "skills/teklif-degerlendirme/agents/openai.yaml": "01e0451ecbcf4266b04d546376a2f4129f8e87f5e40efd9c9d53233d6c10e866",
