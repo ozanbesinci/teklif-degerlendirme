@@ -2,13 +2,13 @@
 name: teklif-degerlendirme-guncelle
 description: Teklif değerlendirme paketinin kararlı sürümünü kontrol eder; açık kurulum/güncelleme isteğinde eski yönetilen sürümü doğrulanmış yeni paketle tamamen değiştirir. Ana skill ve güncelleyicinin bağımsız sürümlerini izler. Salt sürüm kontrolünde dosya değiştirmez.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Teklif Değerlendirme Güncelle
 
 Resmî depo `ozanbesinci/teklif-degerlendirme`. İki skill birlikte dağıtılır fakat
-sürümleri bağımsızdır. Güncelleyicinin bağımsız hattı **v1.0.0** ile başlar; eski
+sürümleri bağımsızdır. Güncel güncelleyici sürümü **v1.1.0**; bağımsız hat v1.0.0 ile başladı. Eski
 3.0.1 etiketi ortak paket sürümüydü. İşlem deterministiktir; alt ajan/model gerekmez.
 
 ## Yetki ve akış
@@ -62,6 +62,8 @@ bir kerelik bağımsız numaralandırma geçişi desteklenir; sonraki bileşenle
 - Eski global analiz kilidi, güncelleme kilidi veya yarım işlemde dur. Yeni analiz
   kendi değişmez snapshot'ında sürer; güncelleme sırasında yeni snapshot hazırlanmaz.
 - ZIP yol kaçışı, bağlantı, çakışan ad, aşırı boyut ve sürüm tutarsızlığı reddedilir.
+- Ana skill v4 paketinde zorunlu çalışma modülleri ve requirements.txt eksik/boşsa kurulum reddedilir; yalnız metadata taşıyan paket eski çalışan ağacın yerine geçemez.
+- Windows geçici dosya kilidinde ağaç değiştirme sınırlı aralıklarla yeniden denenir; kalıcı hatada önceki sürüme dönülür. Paket kütüphane veya Python kurulumu yapmaz.
 - Sandbox/onay atlama, global ayar değişikliği, otomatik periyodik işlem ve indirilmiş
   kurulum kodunu çalıştırma yoktur.
 - **GitHub yayını ayrı yetkidir:** geliştirme/yerel kurulum bittikten sonra push,

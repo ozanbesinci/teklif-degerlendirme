@@ -18,6 +18,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import time
 import zipfile
 
 REPO = "ozanbesinci/teklif-degerlendirme"
@@ -83,6 +84,17 @@ def read_json(path):
     return obj
 
 
+def replace_path(source, target):
+    """Bounded retries for transient Windows sharing locks; persistent errors still fail."""
+    for attempt in range(5):
+        try:
+            return os.replace(source, target)
+        except PermissionError:
+            if attempt == 4:
+                raise
+            time.sleep(0.1 * (2 ** attempt))
+
+
 def write_json(path, obj):
     path = Path(path)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".teklif-write-")
@@ -90,7 +102,7 @@ def write_json(path, obj):
         with os.fdopen(fd, "w", encoding="utf-8") as out:
             json.dump(obj, out, ensure_ascii=False, sort_keys=True, indent=2)
             out.flush(); os.fsync(out.fileno())
-        os.replace(tmp, path)
+        replace_path(tmp, path)
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
@@ -152,7 +164,7 @@ def validate_archive(data, expected_sha, expected_version=None):
         try:
             if files[prefix + "VERSION"].decode("utf-8").strip() != versions[skill]:
                 raise UpdateError(f"Skill sürümü manifestle farklı: {skill}")
-            body = files[prefix + "SKILL.md"].decode("utf-8")
+            body = files[prefix + "SKILL.md"].decode("utf-8").replace("\r\n", "\n")
             front = body.split("\n---", 1)[0]
             declared_version = re.search(r'(?m)^  version: ["\x27]?([0-9]+\.[0-9]+\.[0-9]+)["\x27]?\s*$', front)
             if not body.startswith("---\n") or f"name: {skill}\n" not in front + "\n" or not declared_version or declared_version[1] != versions[skill]:
@@ -167,6 +179,15 @@ def validate_archive(data, expected_sha, expected_version=None):
                 raise UpdateError(f"CHANGELOG sürümü skill ile aynı değil: {skill}")
         except (KeyError, UnicodeError) as exc:
             raise UpdateError("CHANGELOG eksik veya bozuk.") from exc
+    if version(versions[SKILLS[0]]) >= (4, 0, 0):
+        required = {"requirements.txt", "config/ajan-politikasi.json",
+                    "scripts/ajan_yonetimi.py", "scripts/ajan_v4.py", "scripts/kayit_temeli.py", "scripts/model_secimi.py", "scripts/butce.py",
+                    "scripts/veri_kontrol.py", "scripts/teklif_motoru.py", "scripts/excel_uret.py",
+                    "scripts/excel_dogrula.py", "scripts/ortam_ve_belge.py", "scripts/cikti_denetimi.py",
+                    "scripts/oturum_kaydi.py", "scripts/baslangic_mesaji.py"}
+        missing = sorted(p for p in required if not files.get(f"skills/{SKILLS[0]}/{p}"))
+        if missing or not files.get(f"skills/{SKILLS[1]}/scripts/guncelle.py"):
+            raise UpdateError("v4 çalıştırma dosyaları eksik: " + ", ".join(missing))
     return manifest, files
 
 
@@ -265,16 +286,16 @@ def install(root, data, expected_sha, *, register=False, expected_version=None, 
             for name in SKILLS:
                 target = root / name
                 if target.exists():
-                    os.replace(target, stage / "old" / name); moved.append(name)
-                os.replace(stage / "new" / name, target); placed.append(name)
+                    replace_path(target, stage / "old" / name); moved.append(name)
+                replace_path(stage / "new" / name, target); placed.append(name)
             write_json(root / STATE, manifest)
             verify_install(root)
         except BaseException:
             try:
                 for name in reversed(placed):
-                    os.replace(root / name, stage / "new" / name)
+                    replace_path(root / name, stage / "new" / name)
                 for name in reversed(moved):
-                    os.replace(stage / "old" / name, root / name)
+                    replace_path(stage / "old" / name, root / name)
                 if old:
                     write_json(root / STATE, old)
                 else:

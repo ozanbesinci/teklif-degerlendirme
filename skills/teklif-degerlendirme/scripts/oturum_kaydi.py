@@ -4,10 +4,6 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-import queue
-import subprocess
-import threading
-import time
 
 
 def output_text(value):
@@ -75,90 +71,3 @@ def native_receipt_valid(receipt):
         return False
 
 
-def stream_process(command, prompt, cwd, events_path, stderr_path, timeout_seconds=None):
-    """Wait inside Python, not repeated model turns. Preserve minimal structured events."""
-    started = time.monotonic()
-    telemetry = {"status": "RUNNING", "session_id": None, "usage": None, "events": 0}
-    event_queue = queue.Queue()
-    with open(stderr_path, "w", encoding="utf-8") as errors, open(events_path, "w", encoding="utf-8") as log:
-        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                   stderr=errors, text=True, encoding="utf-8", cwd=cwd,
-                                   shell=False, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-
-        def collect():
-            try:
-                for line in process.stdout:
-                    event_queue.put(line)
-            finally:
-                event_queue.put(None)
-
-        reader = threading.Thread(target=collect, daemon=True)
-        reader.start()
-        try:
-            process.stdin.write(prompt)
-            process.stdin.close()
-            eof = False
-            while not eof:
-                if timeout_seconds is not None and time.monotonic() - started > timeout_seconds:
-                    process.terminate()
-                    telemetry["status"] = "TIMED_OUT"
-                    break
-                try:
-                    line = event_queue.get(timeout=0.25)
-                except queue.Empty:
-                    continue
-                if line is None:
-                    eof = True
-                    continue
-                try:
-                    event = json.loads(line)
-                except ValueError:
-                    continue
-                safe = {"type": event.get("type")}
-                if event.get("type") == "thread.started":
-                    telemetry["session_id"] = event.get("thread_id")
-                    safe["thread_id"] = telemetry["session_id"]
-                if event.get("type") == "turn.completed" and isinstance(event.get("usage"), dict):
-                    telemetry["usage"] = telemetry["usage"] or {}
-                    for name, value in event["usage"].items():
-                        if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
-                            telemetry["usage"][name] = telemetry["usage"].get(name, 0) + value
-                    safe["usage"] = event["usage"]
-                if event.get("type") == "turn.failed":
-                    telemetry["status"] = "FAILED"
-                if isinstance(event.get("item"), dict):
-                    safe["item_type"] = event["item"].get("type")
-                    safe["item_status"] = event["item"].get("status")
-                log.write(json.dumps(safe, ensure_ascii=False) + "\n")
-                log.flush()
-                telemetry["events"] += 1
-            try:
-                returncode = process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                returncode = process.wait(timeout=5)
-            telemetry["returncode"] = returncode
-            if telemetry["status"] == "RUNNING":
-                telemetry["status"] = "COMPLETED" if returncode == 0 else "FAILED"
-        except KeyboardInterrupt:
-            if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill(); process.wait(timeout=5)
-            telemetry.update(status="FAILED", returncode=130,
-                             error="Görev kullanıcı tarafından kesildi; alt süreç sonlandırıldı.")
-        except BaseException:
-            if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill(); process.wait(timeout=5)
-            raise
-        finally:
-            process.stdout.close()
-            reader.join(timeout=1)
-            telemetry["duration_seconds"] = round(time.monotonic() - started, 3)
-    return telemetry

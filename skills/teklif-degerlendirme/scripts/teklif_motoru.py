@@ -71,7 +71,9 @@ def price_line(payload: Mapping[str, Any]) -> dict[str, Decimal]:
     ``vat_rate`` zorunludur; KDV dahil fiyat için önce iskontolu brüt tutar ayrıştırılır.
     """
     quantity = positive(payload.get("quantity"), "quantity")
-    unit_price = positive(payload.get("unit_price"), "unit_price")
+    unit_price = as_decimal(payload.get("unit_price"), "unit_price")
+    if unit_price < ZERO:
+        raise CalculationError("unit_price: negatif olamaz")
     price_unit = positive(payload.get("price_unit", ONE), "price_unit")
     vat_rate = rate(payload.get("vat_rate"), "vat_rate")
     discounts = payload.get("discounts", [])
@@ -126,8 +128,9 @@ def _validate_events(events: Any, *, require_owner: bool = False) -> list[Mappin
         if event_id in seen:
             raise CalculationError(f"event_id yinelenmiş: {event_id}")
         seen.add(event_id)
-        require_id(event.get("currency"), f"events[{index}].currency")
-        as_date(event.get("payment_date"), f"events[{index}].payment_date")
+        if not (require_owner and event.get("known") is False):
+            require_id(event.get("currency"), f"events[{index}].currency")
+            as_date(event.get("payment_date"), f"events[{index}].payment_date")
         if require_owner:
             require_id(event.get("owner"), f"events[{index}].owner")
         validated.append(event)
@@ -181,7 +184,10 @@ def cost_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
         else:
             unknown_ids.append(require_id(event["event_id"], "event_id"))
     if not known_events:
-        raise CalculationError("Bilinen hiçbir maliyet olmasa da toplam hesaplanamaz")
+        as_date(payload.get("base_date"), "base_date")
+        return {"status": "no_known_cost_inputs", "unknown_event_ids": unknown_ids,
+                "known_nominal_by_currency": {}, "known_present_value_by_currency": {},
+                "known_present_value_in_base_currency": None, "base_currency": payload.get("base_currency"), "events": []}
     npv = dated_npv({"base_date": payload.get("base_date"), "annual_rates": payload.get("annual_rates"),
                      "events": known_events})
     nominal_by_currency: dict[str, Decimal] = {}

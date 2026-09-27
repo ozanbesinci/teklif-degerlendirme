@@ -287,7 +287,7 @@ sessizce değiştirilmez.
 Bu belirsizliğin panzehiri §5'teki kuraldır: karar hiçbir zaman tek başına toplam puana
 dayandırılmaz, **KTM sıralaması ayrı bir ayak olarak** gösterilir.
 
-## 4. Ağırlık duyarlılığı (zorunlu sekme)
+## 4. Ağırlık duyarlılığı (puanlama yapılırken zorunlu kontrol)
 
 En az üç senaryo kurulur; **her senaryoda ağırlık toplamı 100 olmalıdır:**
 

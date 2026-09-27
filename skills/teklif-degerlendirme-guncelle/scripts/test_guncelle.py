@@ -38,6 +38,30 @@ def package(release="3.0.1", additions=None, rewrite=None, versions=None):
 
 
 class UpdateTests(unittest.TestCase):
+    def test_windows_crlf_skill_header_is_supported(self):
+        additions={}
+        for skill in u.SKILLS:
+            additions[f'skills/{skill}/SKILL.md']=f'---\r\nname: {skill}\r\ndescription: Fixture\r\nmetadata:\r\n  version: "3.0.1"\r\n---\r\nTest\r\n'.encode()
+        data,digest=package(additions=additions)
+        manifest,_=u.validate_archive(data,digest)
+        self.assertEqual(manifest['version'],'3.0.1')
+
+    def test_v4_metadata_only_package_cannot_remove_runtime(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)/'skills'
+            u.install(root,*package())
+            partial,checksum=package('4.0.0',versions={u.SKILLS[0]:'4.0.0',u.SKILLS[1]:'1.1.0'})
+            with self.assertRaises(u.UpdateError): u.install(root,partial,checksum)
+            self.assertEqual(u.verify_install(root)['version'],'3.0.1')
+
+    def test_transient_windows_sharing_error_retries_but_is_bounded(self):
+        with patch.object(u.os,'replace',side_effect=[PermissionError('busy'),None]) as mocked, patch.object(u.time,'sleep'):
+            u.replace_path('from','to')
+            self.assertEqual(mocked.call_count,2)
+        with patch.object(u.os,'replace',side_effect=PermissionError('locked')) as mocked, patch.object(u.time,'sleep'):
+            with self.assertRaises(PermissionError): u.replace_path('from','to')
+            self.assertEqual(mocked.call_count,5)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="teklif-update-test-")
         self.addCleanup(self.tmp.cleanup)

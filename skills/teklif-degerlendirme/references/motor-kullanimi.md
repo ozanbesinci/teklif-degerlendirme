@@ -18,7 +18,8 @@ Skill kökünden örnek kullanım:
 
 Zorunlu alanlar: `quantity`, `unit_price`, `vat_rate`. İsteğe bağlı: `price_unit` (varsayılan `1`), `discounts` (ardışık oran listesi), `price_includes_vat` (varsayılan `false`).
 
-KDV oranı her zaman açıkça verilir. Ardışık indirimler toplanmaz: `brüt × (1-d1) × (1-d2)`. Sonuçta `gross_before_discount`, `discount_amount`, `net_excluding_vat`, `vat_amount`, `total_including_vat` döner. Kur, fiyat ve KDV aynı şey değildir; bu işlem para birimi çevrimi yapmaz.
+Kaynakla teyitli bedelsiz kalem için birim fiyat sıfır olabilir; negatif birim fiyat
+kabul edilmez. Bilinmeyen fiyat sıfır olarak girilmez. KDV oranı her zaman açıkça verilir. Ardışık indirimler toplanmaz: `brüt × (1-d1) × (1-d2)`. Sonuçta `gross_before_discount`, `discount_amount`, `net_excluding_vat`, `vat_amount`, `total_including_vat` döner. Kur, fiyat ve KDV aynı şey değildir; bu işlem para birimi çevrimi yapmaz.
 
 ### `fx_convert`
 
@@ -38,7 +39,8 @@ Her para biriminin kendi oranı zorunludur; eksik oranla hesap durur. Ödeme tar
 
 `dated_npv` alanlarına ek olarak her olayda `owner` ve `known` zorunludur. `known:true` olayları için `amount` gerekir. Her `event_id` benzersizdir; aynı kimlik ikinci kez gelirse motor hata verir. Böylece aynı navlun, KDV, banka gideri veya iade iki KTM basamağına sessizce yazılamaz.
 
-`known:false` maliyetler toplamda sıfır sayılmaz. Çıktı `status:"known_subtotal_not_final"` ve `unknown_event_ids` döner. Bilinen hiçbir maliyet yoksa toplam üretilmez. Hiç bilinmeyen kalem kalmadığında durum `complete_cost_inputs` olur; bu yalnız sayısal maliyet girdilerinin tamamlandığını söyler, kaynak uygunluğu, şartname uygunluğu, mali/hukuki teyit veya analiz/karar onayı değildir. İsteğe bağlı `base_currency` ve `fx_rates` birlikte verildiğinde, bütün bilinen para birimleri için açık `{"forex_selling":"...","unit":"..."}` kuru gerekir ve bilinen NBD tek para birimine çevrilir.
+`known:false` maliyetler toplamda sıfır sayılmaz; henüz bilinmeyen tarih/para birimi
+bu kaydı bilinen tutara çevirmek için uydurulmaz. Çıktı `status:"known_subtotal_not_final"` ve `unknown_event_ids` döner. Bilinen hiçbir maliyet yoksa toplam üretilmez. Hiç bilinmeyen kalem kalmadığında durum `complete_cost_inputs` olur; bu yalnız sayısal maliyet girdilerinin tamamlandığını söyler, kaynak uygunluğu, şartname uygunluğu, mali/hukuki teyit veya analiz/karar onayı değildir. İsteğe bağlı `base_currency` ve `fx_rates` birlikte verildiğinde, bütün bilinen para birimleri için açık `{"forex_selling":"...","unit":"..."}` kuru gerekir ve bilinen NBD tek para birimine çevrilir.
 
 ### `cash_peak`
 
