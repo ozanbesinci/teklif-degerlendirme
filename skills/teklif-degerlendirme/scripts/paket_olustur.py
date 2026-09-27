@@ -1,4 +1,4 @@
-"""Build an isolated, deterministic paired-skill release; never publish or upload."""
+"""Build an isolated, deterministic offer-skill release; never publish or upload."""
 from __future__ import annotations
 
 import argparse
@@ -10,7 +10,7 @@ import stat
 import sys
 import zipfile
 
-SKILLS = ("teklif-degerlendirme", "teklif-degerlendirme-guncelle")
+SKILLS = ("teklif-degerlendirme",)
 TOP = {"SKILL.md", "VERSION", "CHANGELOG.md", "KURULUM.md", "requirements.txt"}
 DIRECTORIES = {"references", "scripts", "config", "agents"}
 EXTENSIONS = {".md", ".py", ".json", ".yaml", ".toml"}
@@ -42,10 +42,10 @@ def build(root: Path, output: Path, release_version=None):
             files[f"skills/{skill}/{rel.as_posix()}"] = path.read_bytes()
     release_version = release_version or versions[SKILLS[0]]
     # Import local validator only; no downloaded script is executed.
-    sys.path.insert(0, str(root / SKILLS[1] / "scripts"))
-    from guncelle import validate_archive, version
+    sys.path.insert(0, str(root / "guncelleyici" / "scripts"))
+    from teklif_paket_legacy import validate_archive, version
     version(release_version)
-    manifest = {"schema": 2, "repository": "ozanbesinci/teklif-degerlendirme", "version": release_version,
+    manifest = {"schema": 3, "repository": "ozanbesinci/teklif-degerlendirme", "version": release_version,
                 "versioning": "independent/v1", "skill_versions": versions,
                 "files": {name: hashlib.sha256(data).hexdigest() for name, data in sorted(files.items())}}
     files["release-manifest.json"] = (json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")

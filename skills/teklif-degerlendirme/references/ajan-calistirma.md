@@ -6,11 +6,12 @@ kayıtlarını yönetir. Kendi başına model çağırmaz. Her komutun seçenekl
 
 ## Hazırlık
 
-`ortam_ve_belge.py` ile gerçek Python/kütüphane kontrolünü yap; scriptin
-`--help` çıktısındaki belge çıkarma komutunu kullan. PDF görüntüleme pypdfium2,
+Ana skill'in başlangıcındaki `guncelleyici` panelinin `@@SONUC` kaydı tamamlanmadan
+`prepare` yapma. Ayrı `ortam_ve_belge.py` ortam kontrolünü tekrarlama; scriptin
+`--help` çıktısındaki belge çıkarma komutunu analiz sırasında kullan. PDF görüntüleme pypdfium2,
 metin çıkarma pdfplumber/pypdf, Excel üretimi openpyxl, Excel hesaplatma pywin32'dir.
-Paket sürümleri `requirements.txt` ile eşleşir. Eksikte `program-guncelle`;
-buradan pip, wheel veya ayrı Python kurulumu yapılmaz.
+Paket sürümleri `requirements.txt` ile eşleşir. Eksik veya başarısız kurulum
+`guncelleyici` sonucunda görünür; buradan pip, wheel veya ayrı Python kurulumu yapılmaz.
 
 Katalog JSON'u: `source` gözlenen araç/katalog kaynağı, `observed_at` saat dilimli
 ISO zaman, `models` gerçek `id` ve desteklenen `efforts` listesidir. Sunulmamış

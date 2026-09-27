@@ -2,7 +2,7 @@
 name: teklif-degerlendirme
 description: Satınalma tekliflerini kapsam, maliyet, ticari koşul ve risk açısından karşılaştırır; şartname varsa uygunluğu denetler. Teklif değerlendirme ve satınalma karar desteği isteklerinde kullan. Seçilen analiz profiline göre formüllü Excel ve gerektiğinde PDF üretir.
 metadata:
-  version: "4.0.0"
+  version: "4.0.2"
 ---
 
 # Teklif Değerlendirme
@@ -13,15 +13,27 @@ kurumsal dil kullan; analiz çıktılarında kişiye özel hitap kullanma.
 
 ## Başlangıç
 
-Yeni analizde `scripts/baslangic_mesaji.py` çalıştır ve çıktısını kullanıcıya görünen
-ilk analiz mesajında aynen göster. Sürüm `VERSION` dosyasından gelir; geliştirme ve
-sürüm sorgusu analiz değildir. Güncelleme bildirimi kurulum yetkisi vermez.
+Yeni analizde ilk olarak kardeş `guncelleyici` skill'ini aç ve onun
+`scripts/panel.ps1` seçim panelini çalıştır. Panelin yerel/çevrimiçi sürüm
+kontrolü ve kullanıcının seçtiği kurulumlar bitmeden teklif hazırlığına geçme.
+Panelin `@@SONUC` kaydını oku: `up_to_date` veya `completed` ile devam et;
+`cancelled`, `error` veya `warning` durumunda sonucu ve engeli kullanıcıya bildir,
+analizi başlatma. Paneli kullanıcı adına onaylama veya seçimini değiştirme.
+`guncelleyici` ana skill'i değiştirdiyse güncel `SKILL.md` ve `VERSION` dosyasını
+yeniden oku. Bu adımda `ortam_ve_belge.py` ortam kontrolünü ayrıca çalıştırma;
+belge çıkarma komutları analiz sırasında kullanılabilir. `guncelleyici` yoksa
+veya başlatılamıyorsa işlemi durdur ve somut engeli bildir.
+
+Ardından `scripts/baslangic_mesaji.py` çalıştır ve çıktısını kullanıcıya görünen
+ilk **teklif analizi** mesajında aynen göster. Sürüm `VERSION` dosyasından gelir;
+geliştirme ve sürüm sorgusu analiz değildir. Ayrı `--check-release` sorgusu yapma:
+sürüm kontrolü `guncelleyici` tarafından yapıldı.
 
 1. `references/ajan-mimarisi.md` ve `references/ajan-calistirma.md` oku. v4 çalışma
    ortamı Windows üzerinde Codex masaüstü / yerel ChatGPT Work, yerleşik alt ajanlar,
-   Python 3.14 ve masaüstü Excel'dir. Ortamı `scripts/ortam_ve_belge.py` ile fiilen
-   kontrol et. Eksik kurulumu `program-guncelle` akışına yönlendir; burada paket
-   indirme veya ikinci kurulum yolu oluşturma.
+   Python 3.14 ve masaüstü Excel'dir. Kurulum ve sürüm yönetimi tamamlanan
+   `guncelleyici` oturumuna aittir; burada paket indirme veya ikinci kurulum yolu
+   oluşturma.
 2. Her yeni analizde ortamın sunduğu **gerçek güncel model kataloğunu** kaydet.
    `scripts/model_secimi.py` rolün Sol/Terra ailesinde erişilebilir en yeni sürümü
    çözer. Model adı veya `latest` takma adı uydurma. Çözülen kimlik analiz boyunca
@@ -98,9 +110,12 @@ kontrolü tekrarlama; veri veya dosya değişirse ilgili kontroller geçersizdir
 
 - Hızlı: 4 çekirdek sekme. Standart: 7–8 ve gerekli koşullu sekmeler. Yüksek güvence:
   kapsamlı dosya, uzman teyidi listesi ve **zorunlu PDF**.
-- Hızlı/standart kanıtı dosya + sayfa metnidir; yüksek güvencede tıklanabilir kaynak
-  bağlantısı da doğrulanır. Tüm profillerde kodla düzen kontrolü; yüksek güvencede
-  ayrıca yalnız Özet ve Karar Özeti görsel kontrolü yapılır.
+- Bütün profillerde Excel bağlantısızdır; kaynak dosya ve sayfa düz metinle gösterilir.
+  Görünen başlık, durum, açıklama ve kaynak alıntısının karşılığı Türkçe yazılır.
+  Her firma için tek açık ticari ad kullanılır; iç kimlikler/baş harfler gösterilmez.
+  Teknik standart kodları, para birimleri ve özgün dosya adları korunur.
+- Tüm profillerde kodla düzen kontrolü; yüksek güvencede bütün sekmeler ve PDF'nin
+  bütün sayfaları görüntüden incelenir. Kesik metin veya okunaksız tabloyla teslim yoktur.
 - `butce.py` her benzersiz oturumun son birikimli toplamını bir kez, ana sohbetin
   yalnız başlangıçtan sonraki farkını sayar. Alt ajanlar dahildir. Bilinmeyen tüketim
   sıfır değildir. %80'de kullanıcıya sor; %100'de yeni model görevi açma.
@@ -141,7 +156,7 @@ daha dar sınırı geçerlidir. Yeni sağlayıcı/alıcı/yayın bu yetkiye dahi
 Satınalma/SAP kaydı, sipariş ve e-posta gönderimi bu skill'in kapsamı dışındadır.
 
 Ana skill analiz sırasında kendisini değiştirmez. Açık kurulum/güncelleme isteğinde
-`teklif-degerlendirme-guncelle` kullan. İki skill'in sürümü bağımsızdır; hazırlanmış
+`guncelleyici` teklif paketi akışını kullan. İki skill'in sürümü bağımsızdır; hazırlanmış
 koşu kendi değişmez kopyasıyla sürer. Güncelleme kilidinde yeni koşu hazırlama;
 eski global analiz kilidini veya yarım işlem kilidini silme. Yerel geliştirme ve
 kurulum GitHub yayınına yetki vermez. Kullanıcının canlı kabul testi ve ayrı yayın

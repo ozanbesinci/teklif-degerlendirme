@@ -52,11 +52,14 @@ Detaylı örnekler `hesaplama-kontrolleri.md` ve ilgili alan referansındadır.
 - Parametre değişim testi yapılıp bütün başlangıç değerleri geri kondu mu?
 - Formül hatası/bozuk karakter/yanlış tipte cache yok mu? Boş metinli formül sonucu
   fiyatlanmamış değeri sıfıra çevirmiyor mu?
-- Düzen kontrolü tüm sekmelerde geçti mi? Yüksek güvencede Özet/Karar Özeti görüntüden
-  incelendi mi; gözlem kaydı gerçek dosya hash'ine bağlı mı?
+- Düzen kontrolü tüm sekmelerde geçti mi? Yüksek güvencede tüm sekmeler ve PDF
+  sayfaları görüntüden incelendi mi; her sayfanın gözlemi gerçek dosya hash'ine bağlı mı?
 - Yüksek güvencede veya rapor istendiğinde PDF açılıyor mu; sonuç ve sürüm damgası
   mevcut mu? PDF ile Excel aynı merkezi veriye ve karar özetine mi bağlı?
-- Hızlı/standart dosya+sayfa kanıtı; yüksek güvencede ayrıca çalışan bağlantı var mı?
+- Tüm profillerde kaynak dosya+sayfa düz metin mi; Excel köprü ve HYPERLINK sayısı sıfır mı?
+- Firma adları bütün tablolarda aynı açık ad mı? Başlıklar/durumlar/açıklamalar Türkçe mi;
+  iç kimlikler ve None/verified/missing gibi ham değerler temizlendi mi?
+- Doğrulanmış teklif bedelleri, eşit kapsamlı maliyet hesabından ayrı ve kapsamıyla görünüyor mu?
 
 Excel yoksa veya doğrulama başarısızsa kontrolü geçti yazma. Kontrol raporu kendi
 başına imza değildir; dayandığı oturum, kaynak ve fiili hesap kanıtı korunur.

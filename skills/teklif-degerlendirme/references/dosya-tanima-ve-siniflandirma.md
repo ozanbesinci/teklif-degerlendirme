@@ -4,7 +4,7 @@ Kullanıcının dosya türünü ayrıca belirtmesi gerekmez. **Dosyaların işle
 alım türü içeriklerinden belirlenir.** Bu referans, dosya tanıma ve sınıflandırma
 yöntemini tanımlar. Otomatik çıkarıcı PDF/XLSX/DOCX/EML/metin için ilk geçiş sağlar;
 diğer biçimler desteklenmiş gibi sayılmaz. Uygun araç yoksa okunamadı ve RFI kaydı
-açılır. Yeni kütüphane kurulumu burada yapılmaz; ortam program-guncelle ile yönetilir.
+açılır. Yeni kütüphane kurulumu burada yapılmaz; ortam guncelleyici ile yönetilir.
 
 Sıra: **(1) biçime göre oku → (2) her dosyayı rolüne göre sınıflandır → (3) alım dalını
 tespit et → (4) envanter tablosunu kullanıcıya göster.**

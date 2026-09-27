@@ -9,6 +9,20 @@ Sürüm numarası kuralı: **büyük** (omurga değişti, çıktı yapısı değ
 
 ---
 
+## v4.0.2 — 2026-09-27 — Excel ve PDF sunum düzeltmeleri
+
+- Excel'deki tüm köprüler kaldırıldı; kaynak dosya ve sayfa bilgisi düz metne çevrildi.
+- Türkçe durumlar, okunabilir konu adları ve tutarlı firma adları eklendi; iç kimliklerin kullanıcıya taşınması giderildi.
+- Doğrulanmış teklif bedelleri, eşit kapsamlı maliyet hesabından ayrı olarak özete eklendi.
+- PDF paragraf/sütun düzeni, bölüm başlıkları ve yinelenen tablo başlıkları düzeltildi; karar özetindeki tekrarlar azaltıldı.
+- Yüksek güvence görsel kapısı tüm sekme ve PDF sayfalarını kapsayacak şekilde genişletildi.
+- Boş puanlama kaydında doğrulayıcı hatası giderildi; Excel kaydı sonrasında sunum kontrolü eklendi.
+
+## v4.0.1 — 2026-09-27 — başlangıçta güncelleyici devri
+
+- Yeni teklif analizinin ilk adımı birleşik `guncelleyici` paneline devredildi. Panel kontrolü ve kullanıcı tarafından seçilen kurulumlar tamamlanmadan analiz başlamaz.
+- Teklif skill'inin ayrı başlangıç ortam kontrolü ve sürüm sorgusu kaldırıldı; panel sonrası güncellenmiş skill talimatı yeniden okunur.
+
 ## v4.0.0 — 2026-09-26 — yerel canlı test adayı
 
 - Üç kullanıcı seçimli profil eklendi: hızlı, standart, yüksek güvence; kapsam, çıktı ve bütçe buna bağlandı.

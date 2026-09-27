@@ -518,15 +518,26 @@ def verify(run, _locked=False):
         if open_issues and decision.get('recommendation') is not None:
             failures.append('Açık kritik konu varken kesin firma önerisi verilemez.')
         if m['profile']=='yuksek_guvence':
-            pdf=file_for(run,m['artifacts']['pdf']); validate_pdf(pdf)
+            pdf=file_for(run,m['artifacts']['pdf']); pdf_info=validate_pdf(pdf)
             visual=load(file_for(run,m['artifacts']['visual']))
-            if receipt.get('pdf_sha256')!=sha(pdf) or visual.get('pdf_sha256')!=sha(pdf) or visual.get('status')!='PASS' or set(visual.get('sheets',[]))!={'Özet','Karar Özeti'} or not visual.get('observations'):
-                failures.append('Özet/Karar Özeti gerçek görsel kontrolü güncel PDF ile doğrulanmadı.')
+            if receipt.get('pdf_sha256')!=sha(pdf) or not visual_review_valid(visual,sha(pdf),contract['sheets'],pdf_info['pages']):
+                failures.append('Tüm sekme ve PDF sayfalarının görsel kontrolü güncel PDF ile doğrulanmadı.')
         if state['status']=='EXHAUSTED': open_issues.append('Bütçe sınırı doldu; ön sonuç.')
         return {'status':'BLOCKED' if failures else 'PRELIMINARY' if open_issues else 'VERIFIED',
                 'failures':failures,'open_issues':sorted(set(open_issues)),'budget':state}
     except (OSError,ValueError,KeyError,TypeError) as error:
         return {'status':'BLOCKED','failures':failures+[str(error)],'open_issues':open_issues}
+
+
+def visual_review_valid(visual, pdf_sha, sheets, pages):
+    observations=visual.get('observations',[])
+    return (visual.get('pdf_sha256')==pdf_sha and visual.get('status')=='PASS'
+            and set(visual.get('sheets',[]))==set(sheets)
+            and set(visual.get('pages',[]))==set(range(1,pages+1))
+            and isinstance(observations,list)
+            and all(any(isinstance(o,dict) and o.get('page')==p and o.get('sheet') in sheets
+                        and str(o.get('finding','')).strip() for o in observations) for p in range(1,pages+1))
+            and {o.get('sheet') for o in observations if isinstance(o,dict)}==set(sheets))
 
 
 def main(argv=None):

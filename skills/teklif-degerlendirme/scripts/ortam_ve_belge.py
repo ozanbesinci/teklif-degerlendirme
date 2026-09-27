@@ -25,10 +25,10 @@ def environment():
         if actual != expected:
             errors.append(f"{name}: beklenen {expected}, kurulu {actual}")
     if sys.version_info[:2] != (3, 14):
-        errors.append("program-guncelle ile desteklenen Python 3.14 gerekli.")
+        errors.append("guncelleyici ile desteklenen Python 3.14 gerekli.")
     return {"status": "PASS" if not errors else "UNVERIFIED", "python": sys.version,
             "executable": sys.executable, "packages": packages, "issues": errors,
-            "remedy": "Eksik/uyumsuz ortam için program-guncelle kullanın; burada kurulum yapılmaz." if errors else None}
+            "remedy": "Eksik/uyumsuz ortam için guncelleyici kullanın; burada kurulum yapılmaz." if errors else None}
 
 
 def extract(path, output):

@@ -14,6 +14,7 @@ import gc
 import json
 import math
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -140,6 +141,14 @@ def preflight(path, data, contract=None, decision=None):
     wb = load_workbook(path, data_only=False, keep_links=False)
     try:
         if wb.sheetnames != contract['sheets']: raise ValueError('Sekme sözleşmesi farklı.')
+        if contract.get('hyperlinks_allowed') is False and any(c.hyperlink or (c.data_type=='f' and re.search(r'\bHYPERLINK\s*\(',c.value,re.I)) for ws in wb for row in ws for c in row):
+            raise ValueError('Sonuç Excelinde tıklanabilir bağlantı bulunamaz.')
+        if contract.get('presentation_version'):
+            for ws in wb:
+                for row in ws:
+                    for c in row:
+                        if c.data_type != 'f' and isinstance(c.value,str) and re.search(r'\b(?:None|verified|unverified|missing|noncompliant|compliant|conflicting|excluded|included)\b|\b(?:field|requirement|contracts)/',c.value):
+                            raise ValueError('Türkçeleştirilmemiş gösterim: '+ws.title+'!'+c.coordinate)
         for c in contract.get('decision_cells', []):
             if wb['Karar Özeti'][c['cell']].value != c['value']:
                 raise ValueError('Excel karar metni hakem kaydından farklı.')
@@ -192,7 +201,7 @@ def parameter_cases(data, contract):
         if any(not equal(baseline[k], v) for k, v in expected.items()):
             cases.append({'kind': kind, 'changes': changes, 'data': changed}); seen.add(kind)
     weight_groups = [[i for i in contract['inputs'] if i['kind'] == 'weight']]
-    for scenario_index in range(len(data.get('scoring', {}).get('sensitivity', []))):
+    for scenario_index in range(len((data.get('scoring') or {}).get('sensitivity', []))):
         weight_groups.append([i for i in contract['inputs'] if i['kind'] == 'sensitivity_weight' and i['path'][2] == scenario_index])
     for weights in weight_groups:
         if len(weights) < 2: continue
@@ -395,6 +404,7 @@ def verify(workbook, data, *, profile=None, pdf=None, timeout=180, contract_path
                 receipt['excel_process_closed'] = not alive or receipt['owned_process_forced_close']
                 if not receipt['excel_process_closed']: raise ValueError('Doğrulamaya ait Excel süreci kapanmadı.')
             if not result.get('ok'): raise ValueError(result.get('error', 'Excel kontrolü tamamlanmadı.'))
+            preflight(copybook, data, contract, decision)
             # Read the saved cache again: a successful in-memory COM evaluation is insufficient.
             from openpyxl import load_workbook
             cached = load_workbook(copybook, data_only=True, keep_links=False)

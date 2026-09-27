@@ -48,9 +48,61 @@ class ExcelTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix='v4-excel-test-'); self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / 'analysis.xlsx'
 
+    def test_links_and_link_formulas_are_rejected(self):
+        data=fixture(); result=build(data,self.path)
+        contract=json.loads(Path(result['contract']).read_text(encoding='utf-8'))
+        for kind in ('hyperlink','formula'):
+            wb=load_workbook(self.path)
+            cell=wb['Özet']['Z1']; cell.value='Kaynak'
+            if kind=='hyperlink': cell.hyperlink='https://example.invalid'
+            else: cell.hyperlink=None; cell.value='=HYPERLINK("https://example.invalid","Kaynak")'
+            wb.save(self.path); wb.close()
+            with self.assertRaisesRegex(ValueError,'bağlantı'): preflight(self.path,data,contract)
+
+    def test_quoted_total_without_comparable_cost_and_turkish_names(self):
+        data=fixture(); data['costs']={}; data['scoring']=None
+        data['offers'][0]['name']='Örnek Makina A.Ş.'
+        data['facts']=[{'fact_id':'A/field/total','evidence_status':'verified','value':125000,'currency':'EUR'},
+                       {'fact_id':'A/field/vat','evidence_status':'verified','value':'excluded'}]
+        data['risks']=[{'offer_id':'A','description':'TCO missing','severity':'Yüksek'}]
+        before=digest(data)
+        result=build(data,self.path,'yuksek_guvence',display_names={'A':'Örnek Makina'})
+        contract=json.loads(Path(result['contract']).read_text(encoding='utf-8'))
+        preflight(self.path,data,contract); parameter_cases(data,contract)
+        self.assertEqual(before,digest(data))
+        wb=load_workbook(self.path)
+        self.assertTrue(any(c.value==125000 for row in wb['Özet'] for c in row))
+        self.assertFalse(any(o['kind']=='base_currency_total' for o in contract['outputs']))
+        values=[c.value for ws in wb for row in ws for c in row if c.data_type!='f']
+        self.assertIn('Hariç',values); self.assertIn('Doğrulandı',values)
+        self.assertNotIn('A',values); self.assertNotIn('verified',values)
+        self.assertEqual(wb['Yeterlilik ve Risk']['A5'].value,'Örnek Makina')
+        self.assertFalse(any(c.hyperlink for ws in wb for row in ws for c in row))
+        wb.close()
+
+    def test_visual_receipt_requires_every_page_and_sheet(self):
+        from ajan_v4 import visual_review_valid
+        review={'pdf_sha256':'abc','status':'PASS','sheets':['Özet','Risk'],'pages':[1,2],
+                'observations':[{'page':1,'sheet':'Özet','finding':'Başlık ve tutarlar okunuyor'},
+                                {'page':2,'sheet':'Risk','finding':'Uzun açıklamalar kesilmiyor'}]}
+        self.assertTrue(visual_review_valid(review,'abc',['Özet','Risk'],2))
+        self.assertFalse(visual_review_valid(review,'abc',['Özet','Risk'],3))
+        self.assertFalse(visual_review_valid(review,'abc',['Özet','Risk','Nakit'],2))
+        review['observations'].pop()
+        self.assertFalse(visual_review_valid(review,'abc',['Özet','Risk'],2))
+
+    def test_source_catalog_retains_reference_labels_without_links(self):
+        data=fixture()
+        inv={'entries':[{'source_id':'S1','path':'C:/kaynak/teklif.pdf','name':'teklif.pdf','sha256':'a'*64}]}
+        build(data,self.path,'yuksek_guvence',inventory=inv)
+        wb=load_workbook(self.path)
+        self.assertEqual(wb['Kaynaklar']['A5'].value,'Kaynak 1')
+        self.assertEqual(wb['Kaynaklar']['B5'].value,'teklif.pdf')
+        wb.close()
+
     def test_profiles_and_no_fabricated_caches(self):
         data = fixture(); result = build(data, self.path, 'hizli')
-        self.assertEqual(result['sheets'], ['Özet', 'Karar Özeti', 'Fiyat ve Kapsam', 'RFI'])
+        self.assertEqual(result['sheets'], ['Özet', 'Karar Özeti', 'Fiyat ve Kapsam', 'Bilgi Talepleri'])
         contract = json.loads(Path(result['contract']).read_text(encoding='utf-8'))
         preflight(self.path, data, contract)
         wb = load_workbook(self.path, data_only=True)

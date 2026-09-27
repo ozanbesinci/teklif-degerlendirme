@@ -1,4 +1,4 @@
-# Sürüm kaynağı: program-guncelle/scripts/kurulum-testi.py; kurulum bu skill'de yapılmaz.
+# Sürüm kaynağı: guncelleyici/scripts/kurulum-testi.py; kurulum bu skill'de yapılmaz.
 openpyxl==3.1.5
 pypdf==6.13.2
 pdfplumber==0.11.10

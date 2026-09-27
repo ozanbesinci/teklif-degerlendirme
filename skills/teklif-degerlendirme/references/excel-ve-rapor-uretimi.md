@@ -8,7 +8,7 @@ Ana sohbet her koşuda yeni üretici veya COM otomasyonu yazmaz.
 
 Alan referanslarındaki eski sekme adları aşağıdaki tabloda ilgili içerik bloğuna
 birleştirilir. Örneğin Fiyat Detayı, Eşit Kapsam ve Poz Bazlı Fiyat hızlıda
-**Fiyat ve Kapsam** içindedir; Uymayan Noktalar **RFI** ile ilişkilidir.
+**Fiyat ve Kapsam** içindedir; Uymayan Noktalar **Bilgi Talepleri** ile ilişkilidir.
 Sekme sayısını artırmak için boş tablo kurulmaz; uygulanmayan yöntem Özet'te gerekçelidir.
 
 | İçerik / sekme | Hızlı | Standart | Yüksek güvence |
@@ -16,14 +16,14 @@ Sekme sayısını artırmak için boş tablo kurulmaz; uygulanmayan yöntem Öze
 | Özet | Evet | Evet | Evet |
 | Karar Özeti | Evet | Evet | Evet |
 | Fiyat ve Kapsam | Evet | Evet | Evet |
-| RFI | Evet | Evet | Evet |
+| Bilgi Talepleri | Evet | Evet | Evet |
 | Elemeli Değerlendirme | Özet'te | Ayrı | Ayrı |
 | Ticari ve Sözleşme | Özet'te kısa | Ayrı | Ayrı |
-| Şartname Uygunluğu | Özet/RFI'da sınır | Varsa | Varsa |
+| Şartname Uygunluğu | Özet/Bilgi Talepleri'nde sınır | Varsa | Varsa |
 | Puanlama ve duyarlılık | Yok | Koşullar uygunsa küçük tablo | Koşullar uygunsa ayrı |
 | Yeterlilik ve Risk | Karar Özeti'nde kısa | Karar Özeti'nde kısa | Ayrı |
 | Uzman Teyidi | Yok | Yok | Ayrı; çözülemeyen konular ve muhatap |
-| İthalat, finansman, TCO, nakit, stok, kalite | Dört sekme içinde gerekli bilgi | Veri varsa koşullu | İlgiliyse ayrıntılı |
+| İthalat, finansman, toplam sahip olma, nakit, stok, kalite | Dört sekme içinde gerekli bilgi | Veri varsa koşullu | İlgiliyse ayrıntılı |
 | Değişim Kaydı | Yeni teklif revizyonunda | Yeni teklif revizyonunda | Yeni teklif revizyonunda |
 | PDF | İstenirse | İstenirse | Zorunlu |
 
@@ -79,9 +79,8 @@ kusuru değildir. Cevapsız sorular revizyonda korunur.
 
 ## Kaynaklar ve metin çıkarımı
 
-Hızlı/standartta kanıt “dosya adı + sayfa/hücre”. Yüksek güvencede kaynak yolu ve
-varlığı doğrulanmış tıklanabilir bağlantı da bulunur; Türkçe/boşluk içeren yol doğru
-kodlanır. İşletim sistemindeki dosya konumu erişilebilir olmalıdır; sahte bağlantı yoktur.
+Bütün profillerde kanıt düz metindir: “Kaynak 1 · sayfa/hücre” ve Kaynaklar
+sekmesinde özgün dosya adı. Excel'de iç/dış köprü veya HYPERLINK formülü bulunmaz.
 
 pdfplumber/pypdf metni özellikle dar/yatay/çok sayfalı tablolarda hata yapabilir.
 Sayfa toplamlarını beyan edilen ara/genel toplamla kodla karşılaştır; farklılıkta
@@ -109,8 +108,36 @@ uygun kayıtlı ön sonuç dışında doğrulanmış nihai teslim iddiası yoktu
 LibreOffice veya başka hesap motoruna sessiz geçiş yapılmaz.
 
 Mekanik kontrol tüm profillerde formül/karakter/bağlantı, sütun/satır boyutu ve
-kesik metin riskini kapsar. Yüksek güvencede ayrıca **yalnız Özet ve Karar Özeti**
-gerçek görüntüden incelenir; gözlenen sayfa, dosya hash'i ve bulgular kaydedilir.
+kesik metin riskini kapsar. Yüksek güvencede **tüm sekmeler ve tüm PDF sayfaları**
+gerçek görüntüden incelenir; dosya hash'i, sayfa/sekme ve somut bulgular kaydedilir.
+Küçük önizleme yalnız sayfa envanteridir; uzun metinli ve yoğun tablolar okunabilir
+ölçekte de kontrol edilir. Başlık kesilmesi, yalnız kalan tablo başlığı, anlamsız boş
+sayfa, aşırı küçülmüş yazı ve taşma düzeltilmeden PASS verilmez.
+
+## Türkçe gösterim ve firma adları
+
+Sekme adı **Bilgi Talepleri**, konu kimliği **BT-001**; maliyet modülü
+**Toplam Sahip Olma** olarak görünür. RFI/TCO/QA ve verified/missing gibi
+makine alanları merkezi JSON'da kalır. Başlıklar, durumlar ve açıklamalar Türkçedir.
+Yabancı dildeki kaynak ifadesinin Türkçe karşılığını göster; özgün alıntıyı merkezi
+veride sakla. Döviz/standart kodlarını ve özgün kaynak dosya adlarını bozma.
+
+Her firmaya kaynakla doğrulanmış tek açık ticari ad seç. Belirsizse kullanıcıya sor.
+`--display-names <firma-adlari.json>` ile `{ "A": "Firma ticari adı" }`
+eşlemesini üreticiye ver; aynı ad özet, risk, puan, nakit ve karar metninde kullanılır.
+Bilinen İngilizce durumlar otomatik çevrilir; serbest metnin Türkçesi üretim öncesinde
+kontrol edilir. Otomatik sözcük taraması dil kontrolünün tamamı değildir.
+
+Doğrulanmış teklif toplamı, eşit kapsamlı maliyet hesaplanamasa da Özet'te
+**Teklif tutarı** olarak döviz, KDV, kapsam ve kaynakla görünür. Bu tutarları
+karşılaştırılabilir toplam maliyete veya firma sıralamasına kendiliğinden dönüştürme.
+Karar metnini yapay sabit karakter satırlarına bölme; gerçek paragrafları koru.
+Ayrıntı tablolarındaki bütün açık konu kimliklerini karar özetine tekrar dökme.
+
+Görsel kayıt: `pdf_sha256`, `status: PASS`, tüm sekme adlarını içeren `sheets`,
+1'den son sayfaya kadar `pages` ve her sayfa için
+`observations: [{"page": 1, "sheet": "Özet", "finding": "Somut görsel gözlem"}]`.
+Eksik sayfa/sekme gözlemi yüksek güvence kapısını geçmez.
 
 ## PDF ve sürüm
 

@@ -1,4 +1,4 @@
-# Kurulum ve dağıtım — ana skill v4.0.0 / güncelleyici v1.1.0
+# Kurulum ve dağıtım — ana skill v4.0.2 / birleşik güncelleyici
 
 Bu kaynak **yerel canlı test adayıdır**. Dosyadaki sürüm numarası GitHub'da
 yayımlandığı veya canlı kabul testinin geçtiği anlamına gelmez.
@@ -7,9 +7,9 @@ Resmî dağıtım deposu:
 
 ## Paket
 
-İki skill birlikte kurulur; `VERSION` dosyaları bağımsızdır:
-ana skill 4.0.0, güncelleyici 1.1.0. Paket manifesti şema 2'dir;
-`skill_versions` iki sürümü, `version` paket etiketini taşır.
+Yeni teklif paketi yalnız ana skill'i içerir; birleşik `guncelleyici` ayrı
+kalır. Paket manifesti şema 3'tür. Eski şema 1/2 paketleri güncelleyici
+tarafından okunur, içlerindeki eski güncelleyici klasörü kurulmaz.
 
 ```text
 skills/
@@ -19,10 +19,6 @@ skills/
     requirements.txt
     config/
     references/
-    scripts/
-  teklif-degerlendirme-guncelle/
-    SKILL.md
-    VERSION
     scripts/
 ```
 
@@ -37,42 +33,43 @@ Kaynak depo ZIP'i, doğrulanmış dağıtım ZIP'iyle aynı kurulum biçimi say�
 - Windows, yerel Codex masaüstü / ChatGPT Work, model/efor seçebilen yerleşik alt ajanlar.
 - Çalıştırılarak doğrulanmış Python **3.14**; Store kısayolu yeterli değildir.
 - `requirements.txt` içindeki tam sürümler: openpyxl, pypdf, pdfplumber,
-  pypdfium2 ve pywin32. Sürüm kaynağı `program-guncelle` paket listesidir.
+  pypdfium2 ve pywin32. Sürüm kaynağı `guncelleyici` paket listesidir.
 - Masaüstü Microsoft Excel; Python + pywin32 ile görünmez bağımsız örnekte gerçek
   yeniden hesaplama ve temiz kapanış.
 - Gerçek güncel araç kataloğunda erişilebilir Sol ve Terra aileleri, rollerin medium/high
   eforları. Her yeni analiz erişilebilir en yeni aile sürümünü çözer. Luna yoktur.
 - Gerçek oturum JSONL kayıtlarına, model/efora ve token sayaçlarına erişim.
 
-Python/kütüphane eksikliği `program-guncelle` işidir. Python kurucusu veya wheel
+Python/kütüphane eksikliği `guncelleyici` program akışının işidir. Python kurucusu veya wheel
 dosyaları teklif paketine gömülmez; bu skill ikinci pip/winget kurulum yolu açmaz.
 Katalog, efor, Excel veya telemetri yoksa “tam doğrulanmış v4” denmez.
 
 ## İlk kurulum ve güncelleme
 
-Komutların güncel kaynağı `../teklif-degerlendirme-guncelle/SKILL.md` ve
-`scripts/guncelle.py --help` çıktısıdır.
+Komutların güncel kaynağı `../guncelleyici/references/teklif-paketi.md` ve
+`../guncelleyici/scripts/teklif-guncelle.py --help` çıktısıdır.
 
 ```text
-python "<guncelle.py>" check --root "<fiziksel-skills>"
-python "<guncelle.py>" install --root "<fiziksel-skills>" --archive "<paket.zip>" --sha256 "<64-karakter-hash>"
-python "<guncelle.py>" verify --root "<fiziksel-skills>"
+python "<teklif-guncelle.py>" check --root "<fiziksel-skills>"
+python "<teklif-guncelle.py>" update --root "<fiziksel-skills>"
+python "<teklif-guncelle.py>" verify --root "<fiziksel-skills>"
 ```
 
-“Sürümü kontrol et” yalnız okuma; “kur/güncelle” iki yönetilen skill ağacını yenileme
-yetkisidir. Normal çevrimiçi güncelleme resmî kararlı Release'i kullanır. Geliştirme
-yetkisiyle doğrulanmış yerel aday aynı install yolundan kurulabilir; henüz
-yayımlanmamış sürümü GitHub'dan indirmeye çalışma.
+“Sürümü kontrol et” yalnız okuma; “güncelle” yalnız ana skill ağacını yenileme
+yetkisidir. Normal çevrimiçi güncelleme resmî kararlı Release'i kullanır.
+Henüz yayımlanmamış yerel adayı GitHub'dan indirmeye çalışma.
 
-Paket doğrulanmadan mevcut kurulum değiştirilmez. İki ağaç dosyalar üst üste
-eklenmeden tamamen değiştirilir; işlem hatasında önceki ağaçlar geri konur.
+Paket doğrulanmadan mevcut kurulum değiştirilmez. Ana skill ağacı dosyalar üst üste
+eklenmeden tamamen değiştirilir; işlem hatasında önceki ağaç geri konur.
 Windows geçici kilitleri sınırlı yeniden denemeye tabidir; kalıcı hata gizlenmez.
-İki ağaç tek atomik dosya değildir; işlem günlüğü, kurtarma ve kilit kontrolleri atlanmaz.
+İşlem günlüğü, kurtarma ve kilit kontrolleri atlanmaz.
 
-Yönetimsiz/değiştirilmiş eski kurulum otomatik silinmez. `register` yalnız paketle
-birebir eşleşen kaynak kurulumunu yönetilen envantere alır. Açık geliştirme kapsamındaki
-aynı sürüm adayını yenilemek için `install --replace-local` mevcut kurallarıyla
-kullanılabilir; normal update buna başvurmaz. Yayımlanmış sürüm içeriği değiştirilmez.
+Yönetimsiz/değiştirilmiş eski kurulum otomatik silinmez. Yayımlanmış sürüm içeriği
+değiştirilmez. Eski eşleştirilmiş paket kaydı yalnız ana skill'in dosya özetleri
+eşleşiyorsa yeni tek skill kaydına alınır.
+Doğrulanmış yerel aday `teklif-guncelle.py register --archive ... --sha256 ...`
+ile kaydedilebilir; komut yalnız manifestle birebir eşleşen mevcut dosyaları
+envantere alır, paket kurmaz.
 
 Ortak fiziksel skill kökü ve mevcut junction düzeni korunur. Başka skill'ler, global
 model/ajan ayarları ve kullanıcı dosyaları değiştirilmez. Yeni skill sonraki turda
@@ -82,11 +79,15 @@ keşfedilir; kullanıcıya görünmesi başarılı analiz koşusunun kanıtı de
 
 1. Personel ana sohbet için güncel Sol veya Terra ailesini seçer; efor tercihi kendisinindir.
 2. `$teklif-degerlendirme` ile kaynak dosyaları/klasörü verir.
-3. Skill envanter ve öneriyi gösterir; personel hızlı, standart veya yüksek güvence seçer.
-4. Gerçek katalog ve ana oturum sayacıyla `prepare` değişmez koşu kopyasını oluşturur.
-5. Sonraki işlemler manifestin `runner` yoluyla yürür. `task` yalnız görev kaydıdır;
+3. Skill önce kardeş `guncelleyici` seçim panelini çalıştırır; kullanıcı seçimlerini
+   yapar. Panel `up_to_date` veya `completed` sonucu verince, varsa güncellenmiş
+   skill talimatı yeniden okunur ve teklif analizi başlar. Başarısız, uyarılı veya
+   iptal edilmiş panel sonucunda analiz başlamaz.
+4. Skill envanter ve öneriyi gösterir; personel hızlı, standart veya yüksek güvence seçer.
+5. Gerçek katalog ve ana oturum sayacıyla `prepare` değişmez koşu kopyasını oluşturur.
+6. Sonraki işlemler manifestin `runner` yoluyla yürür. `task` yalnız görev kaydıdır;
    model yerleşik alt ajan aracıyla açık model/efor kullanılarak çağrılır.
-6. Gerçek model/efor makbuzları, kod QA, bağımsız kaynak okuma, hakem, karar özeti
+7. Gerçek model/efor makbuzları, kod QA, bağımsız kaynak okuma, hakem, karar özeti
    ve Excel kontrolü tamamlandığında `verify` / `close` çalışır.
 
 Komut yaşam döngüsü: `references/ajan-calistirma.md`.
@@ -99,7 +100,7 @@ kilidi veya yarım işlem kilidi otomatik silinmez. Kaynak değişirse yeni revi
 
 ## Yerel kontrol ve canlı kabul
 
-- Her bileşenin VERSION, SKILL metadata ve CHANGELOG'u eşleşmelidir.
+- Paketlenen ana skill'in VERSION, SKILL metadata ve CHANGELOG'u eşleşmelidir.
 - Hesap örnekleri, merkezi veri, model çözümü, oturum kanıtı, bütçe, Excel ve
   güncelleme testleri çalıştırılır. Sadece başlık/metin eşleşmesi yeterli değildir.
 - Gerçek Excel yeniden hesaplama, bağımsız motor mutabakatı ve parametreyi geri alma
@@ -113,19 +114,18 @@ kilidi veya yarım işlem kilidi otomatik silinmez. Kaynak değişirse yeni revi
 
 ## Paket hazırlama ve yayın
 
-`scripts/paket_olustur.py` yalnız iki skill'in izinli kaynak dosyalarını alır.
+`scripts/paket_olustur.py` yalnız ana skill'in izinli kaynak dosyalarını alır.
+Paket doğrulayıcısı için aynı fiziksel `skills/` kökünde `guncelleyici` bulunmalıdır.
 Çıktı skill ağacının dışında olmalıdır. requirements.txt pakete girer; şirket
 teklifleri, fiyatlar, raporlar, sohbet/oturum/hafıza, kimlik bilgileri ve gerçek test
 verileri girmez. Paket hash'i bütünlüğü doğrular; bağımsız yayıncı imzası değildir.
 
-Yalnız güncelleyici değişirse `--release-version` ile paket etiketi ilerletilebilir;
-ana skill zorla artırılmaz. Release etiketi ve paket version alanı aynı olmalıdır.
+Release etiketi ve paket version alanı aynı olmalıdır.
 Yerel kurulum, commit/push/tag/Release/yükleme yetkisi değildir. Kullanıcı yayın
 talep etmeden yayın yapılmaz; yerel durum ile yayımlanmış durum ayrı raporlanır.
 
-Eski ortak 3.0.1 güncelleyici şema 2'yi okuyamaz. Böyle bir kurulumdan ilk geçiş
-yeni güncelleyicinin doğrulanmış kaynak kopyasıyla yapılır; eski script'in yeni
-şemayı desteklediği varsayılmaz.
+Eski ortak 3.0.1 güncelleyici yeni paketi okuyamaz. Böyle bir kurulumdan ilk geçiş
+birleşik güncelleyicinin doğrulanmış kaynak kopyasıyla yapılır.
 
 v4 bu ortam için tasarlanır; Claude Teams ve diğer web istemcileri doğrulanmış
 çalışma kapsamı dışındadır. İş kılavuzlarını okuyabilmeleri aynı model/araç/Excel
