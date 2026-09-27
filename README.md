@@ -2,20 +2,17 @@
 
 Satınalma tekliflerini kapsam, maliyet, ticari koşul ve risk açısından karşılaştırır.
 
-## Kararlı sürüm: v4.0.2
+## Kararlı sürüm: v4.0.3
 
-Ana skill **4.0.2**, kullanıcının açık kararıyla kararlı dağıtıma alınmıştır.
-[ZIP ve SHA-256 doğrulama dosyası](https://github.com/ozanbesinci/teklif-degerlendirme/releases/tag/v4.0.2)
+Ana skill **4.0.3**, kullanıcının açık kararıyla kararlı dağıtıma alınmıştır.
+[ZIP ve SHA-256 doğrulama dosyası](https://github.com/ozanbesinci/teklif-degerlendirme/releases/tag/v4.0.3)
 GitHub Release üzerinden dağıtılır. Uçtan uca canlı analiz kabulü ayrıca izlenir.
 
 ### Son değişiklikler
 
-- Yeni analiz başlangıcı birleşik `guncelleyici` skill'ine devredilir.
-- Sonuç Excelinde köprü bulunmaz; kaynak dosya ve sayfa düz metinle gösterilir.
-- Görünen etiketler Türkçedir; firmalar bütün tablolarda aynı açık adla gösterilir.
-- Doğrulanmış teklif bedelleri, eşit kapsamlı maliyet hesabından ayrı gösterilir.
-- PDF paragraf, başlık ve basım düzeni düzeltildi.
-- Yüksek güvence görsel kontrolü bütün sekme ve PDF sayfalarını kapsar.
+- Yeni analiz başlangıcında güncelleyicinin sürüm tablosu masaüstü Work ve Codex sohbetinde gösterilir; PowerShell seçim penceresi çağrılmaz.
+- Kullanıcı **Güncelle** demeden kurulum başlamaz; seçilen işlemler tamamlanınca analiz devam eder.
+- Önceki 4.0.2 sürümündeki Excel ve PDF sunum düzeltmeleri korunur.
 
 ## Kurulum yapısı
 
@@ -31,9 +28,9 @@ Birleşik güncelleyici normal kullanımda en son kararlı Release paketini dene
 
 ## Doğrulama
 
-Bu düzeltme için 49 otomatik test geçti; iki isteğe bağlı Excel testi atlandı.
-Gerçek masaüstü Excel yeniden hesaplama, bağımsız sayısal mutabakat ve parametre
-geri alma ayrıca doğrulandı. Bu kontroller uçtan uca canlı analiz kabulünün yerine geçmez.
+97 Python testi geçti; iki isteğe bağlı test atlandı. Güncelleyicinin 42 Python
+testi ve sohbet akış testi de geçti. Yerel Work içinden canlı kullanım ve uçtan
+uca teklif analizi kabulü ayrıca izlenir.
 
 - [Kurulum ve çalışma kapsamı](skills/teklif-degerlendirme/KURULUM.md)
 - [Sürüm geçmişi](skills/teklif-degerlendirme/CHANGELOG.md)

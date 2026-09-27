@@ -6,7 +6,7 @@ kayıtlarını yönetir. Kendi başına model çağırmaz. Her komutun seçenekl
 
 ## Hazırlık
 
-Ana skill'in başlangıcındaki `guncelleyici` panelinin `@@SONUC` kaydı tamamlanmadan
+Ana skill'in başlangıcındaki `guncelleyici` sohbet akışının `@@SONUC` kaydı tamamlanmadan
 `prepare` yapma. Ayrı `ortam_ve_belge.py` ortam kontrolünü tekrarlama; scriptin
 `--help` çıktısındaki belge çıkarma komutunu analiz sırasında kullan. PDF görüntüleme pypdfium2,
 metin çıkarma pdfplumber/pypdf, Excel üretimi openpyxl, Excel hesaplatma pywin32'dir.

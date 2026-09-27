@@ -2,7 +2,7 @@
 name: teklif-degerlendirme
 description: Satınalma tekliflerini kapsam, maliyet, ticari koşul ve risk açısından karşılaştırır; şartname varsa uygunluğu denetler. Teklif değerlendirme ve satınalma karar desteği isteklerinde kullan. Seçilen analiz profiline göre formüllü Excel ve gerektiğinde PDF üretir.
 metadata:
-  version: "4.0.2"
+  version: "4.0.3"
 ---
 
 # Teklif Değerlendirme
@@ -14,11 +14,14 @@ kurumsal dil kullan; analiz çıktılarında kişiye özel hitap kullanma.
 ## Başlangıç
 
 Yeni analizde ilk olarak kardeş `guncelleyici` skill'ini aç ve onun
-`scripts/panel.ps1` seçim panelini çalıştır. Panelin yerel/çevrimiçi sürüm
-kontrolü ve kullanıcının seçtiği kurulumlar bitmeden teklif hazırlığına geçme.
-Panelin `@@SONUC` kaydını oku: `up_to_date` veya `completed` ile devam et;
-`cancelled`, `error` veya `warning` durumunda sonucu ve engeli kullanıcıya bildir,
-analizi başlatma. Paneli kullanıcı adına onaylama veya seçimini değiştirme.
+`SKILL.md` dosyasındaki sohbet içi `scan` akışını çalıştır. Sürüm tablosunu
+sohbette göster; kullanıcı **Güncelle** demeden kurulum başlatma. Kullanıcının
+seçtiği `apply` işlemleri bitmeden teklif hazırlığına geçme.
+Güncelleyicinin `@@SONUC` kaydını oku: `up_to_date` veya kurulumdan sonra
+`completed` ile devam et. `selection_required` durumunda kullanıcı yanıtını
+bekle; `stale` durumunda yenilenen tabloyu gösterip yeniden seçim al.
+`cancelled`, `busy`, `error` veya `warning` durumunda sonucu ve engeli bildir,
+analizi başlatma. Kullanıcı adına seçim yapma veya **Güncelle** kararı verme.
 `guncelleyici` ana skill'i değiştirdiyse güncel `SKILL.md` ve `VERSION` dosyasını
 yeniden oku. Bu adımda `ortam_ve_belge.py` ortam kontrolünü ayrıca çalıştırma;
 belge çıkarma komutları analiz sırasında kullanılabilir. `guncelleyici` yoksa

@@ -1,6 +1,6 @@
-# Kurulum ve dağıtım — ana skill v4.0.2 / birleşik güncelleyici
+# Kurulum ve dağıtım — ana skill v4.0.3 / birleşik güncelleyici
 
-**4.0.2 kararlı dağıtım sürümüdür.** Yayın, kullanıcının açık kararıyla yapılmıştır.
+**4.0.3 kararlı dağıtım sürümüdür.** Yayın, kullanıcının açık kararıyla yapılmıştır.
 Excel/PDF doğrulaması ile uçtan uca canlı analiz kabulü ayrı kayıtlardır;
 kararlı yayın, bütün canlı analiz senaryolarının kabul edildiği anlamına gelmez.
 Resmî dağıtım deposu:
@@ -80,10 +80,11 @@ keşfedilir; kullanıcıya görünmesi başarılı analiz koşusunun kanıtı de
 
 1. Personel ana sohbet için güncel Sol veya Terra ailesini seçer; efor tercihi kendisinindir.
 2. `$teklif-degerlendirme` ile kaynak dosyaları/klasörü verir.
-3. Skill önce kardeş `guncelleyici` seçim panelini çalıştırır; kullanıcı seçimlerini
-   yapar. Panel `up_to_date` veya `completed` sonucu verince, varsa güncellenmiş
-   skill talimatı yeniden okunur ve teklif analizi başlar. Başarısız, uyarılı veya
-   iptal edilmiş panel sonucunda analiz başlamaz.
+3. Skill önce kardeş `guncelleyici` taramasını çalıştırır; gereken seçimleri
+   sohbet tablosunda gösterir ve kullanıcının **Güncelle** yanıtını bekler.
+   `up_to_date` veya seçilen kurulumlardan sonra `completed` sonucu gelince,
+   varsa güncellenmiş skill talimatı yeniden okunur ve teklif analizi başlar.
+   Başarısız, uyarılı veya iptal edilmiş sonuçta analiz başlamaz.
 4. Skill envanter ve öneriyi gösterir; personel hızlı, standart veya yüksek güvence seçer.
 5. Gerçek katalog ve ana oturum sayacıyla `prepare` değişmez koşu kopyasını oluşturur.
 6. Sonraki işlemler manifestin `runner` yoluyla yürür. `task` yalnız görev kaydıdır;

@@ -1,13 +1,13 @@
 {
   "files": {
-    "skills/teklif-degerlendirme/CHANGELOG.md": "e6df8f52f39079a36abeff00bd75e5b0a592fe351977bfb056dcecdc3ed8a91e",
-    "skills/teklif-degerlendirme/KURULUM.md": "a55629a27e326b6ab28fb40cabeabe08bf8e233d2518de0987ee76ca99af51d1",
-    "skills/teklif-degerlendirme/SKILL.md": "f34fda3329a231979045866064a2e5e479cfc51fa7e56713eafa5476d1a3647f",
-    "skills/teklif-degerlendirme/VERSION": "c6d3fb057b198f1d0563d4218d4e36b48df752251aabffe78ea60aac5a72c7a2",
+    "skills/teklif-degerlendirme/CHANGELOG.md": "d6a325e76dfeeb1828860bf5640cca4a440d85477ca4b2e32330a041faf205de",
+    "skills/teklif-degerlendirme/KURULUM.md": "7e371b7ae5922ecb97b50448d602e458a1dbb5e51df8ec6f8bf4affce4d751d5",
+    "skills/teklif-degerlendirme/SKILL.md": "d8eb56b41b37444e0fed62c263615d9abb65f41339b295e61c08d2bb9f9aedd4",
+    "skills/teklif-degerlendirme/VERSION": "056224f51201ea92ff0550c523b936505df28451edd4d0b096919b5713ec93fb",
     "skills/teklif-degerlendirme/agents/openai.yaml": "01e0451ecbcf4266b04d546376a2f4129f8e87f5e40efd9c9d53233d6c10e866",
     "skills/teklif-degerlendirme/config/ajan-politikasi.json": "589f3c1fcf35d0b3f48bae63ed92098470fb0a1b3f16402d84a540f17b50d1a7",
     "skills/teklif-degerlendirme/config/result-schema.json": "95acb1d563d82a5ed27bbb119adaeafde7676390fd9231e17cb5123036e695bd",
-    "skills/teklif-degerlendirme/references/ajan-calistirma.md": "286ee2ae14b7247f9cb794b6b66d9cc58f3c533bb930257ded0f44e3dcfe3b93",
+    "skills/teklif-degerlendirme/references/ajan-calistirma.md": "7c0cf28424ef68ad48f93a999309c543b2e66247a0566ff65db789dff2192094",
     "skills/teklif-degerlendirme/references/ajan-mimarisi.md": "92c4ebf465cf2cd934a2bb063003980e422da995167df946f60ef5c0560c6040",
     "skills/teklif-degerlendirme/references/analiz-hazirligi.md": "a9ce116bf59f44023128c7d3aedac2f1ce18187626ad8e95160dbbe876226ae5",
     "skills/teklif-degerlendirme/references/dal-genel-mal-hizmet.md": "17a063ec61e93601a34dbc44166ab796f76d2636fe9d37dddd79dd17af14c47b",
@@ -65,8 +65,8 @@
   "repository": "ozanbesinci/teklif-degerlendirme",
   "schema": 3,
   "skill_versions": {
-    "teklif-degerlendirme": "4.0.2"
+    "teklif-degerlendirme": "4.0.3"
   },
-  "version": "4.0.2",
+  "version": "4.0.3",
   "versioning": "independent/v1"
 }

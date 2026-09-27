@@ -9,6 +9,10 @@ Sürüm numarası kuralı: **büyük** (omurga değişti, çıktı yapısı değ
 
 ---
 
+## v4.0.3 — 2026-09-28 — sohbet içi güncelleyici başlangıcı
+
+- Güncelleyici başlangıcı masaüstü Work ve Codex sohbetindeki seçim akışına bağlandı; PowerShell seçim penceresi çağrısı kaldırıldı.
+
 ## v4.0.2 — 2026-09-27 — Excel ve PDF sunum düzeltmeleri
 
 - Kullanıcının açık yayın kararıyla kararlı dağıtıma alındı. Uçtan uca canlı analiz kabulü, yayın durumundan ayrı tutuldu.
